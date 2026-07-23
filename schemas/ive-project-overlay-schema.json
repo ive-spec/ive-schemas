@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IVE Project Overlay Schema",
+  "type": "object",
+  "required": ["overlay", "targets"],
+  "properties": {
+    "overlay": {
+      "type": "object",
+      "required": ["schemaVersion", "targets"],
+      "properties": {
+        "schemaVersion": { "type": "string", "enum": ["1.0"] },
+        "description": { "type": "string" },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["target", "extensions"],
+            "properties": {
+              "target": { "type": "string", "enum": ["$"] },
+              "extensions": {
+                "type": "object",
+                "required": ["project"],
+                "properties": {
+                  "project": {
+                    "type": "object",
+                    "required": ["rootDirectory", "basePackage", "structure"],
+                    "properties": {
+                      "rootDirectory": { 
+                        "type": "string", 
+                        "description": "Directorio raíz donde se generará el código (ej. './src/main/java')."
+                      },
+                      "basePackage": { 
+                        "type": "string", 
+                        "description": "Paquete o namespace base (ej. 'com.petstore.api')."
+                      },
+                      "structure": {
+                        "type": "object",
+                        "description": "Mapeo de primitivas IVE a estructura física.",
+                        "properties": {
+                          "view": { "$ref": "#/definitions/mapping" },
+                          "intent": { "$ref": "#/definitions/mapping" },
+                          "service": { "$ref": "#/definitions/mapping" },
+                          "repository": { "$ref": "#/definitions/mapping" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "mapping": {
+      "type": "object",
+      "required": ["directory", "packageSuffix", "namingConvention", "fileExtension"],
+      "properties": {
+        "directory": { "type": "string", "description": "Subdirectorio relativo al rootDirectory." },
+        "packageSuffix": { "type": "string", "description": "Sufijo a agregar al basePackage (ej. '.model')." },
+        "namingConvention": { "type": "string", "description": "Patrón de nombre (ej. '{IntentName}Controller')." },
+        "fileExtension": { "type": "string", "description": "Extensión del archivo (ej. '.java', '.ts')." }
+      }
+    }
+  }
+}

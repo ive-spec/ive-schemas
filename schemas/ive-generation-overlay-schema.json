@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IVE Generation Overlay Schema",
+  "type": "object",
+  "required": ["overlay"],
+  "properties": {
+    "overlay": {
+      "type": "object",
+      "required": ["schemaVersion", "targets"],
+      "properties": {
+        "schemaVersion": { "type": "string", "enum": ["1.0"] },
+        "description": { "type": "string" },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["target", "extensions"],
+            "properties": {
+              "target": { "type": "string", "enum": ["$"] },
+              "extensions": {
+                "type": "object",
+                "required": ["generation"],
+                "properties": {
+                  "generation": {
+                    "type": "object",
+                    "required": ["type", "artifacts"],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["spec", "software"],
+                        "description": "Tipo de generación: 'spec' para OpenAPI/AsyncAPI, 'software' para código."
+                      },
+                      "specFamily": {
+                        "type": "string",
+                        "enum": ["openapi", "asyncapi"],
+                        "description": "Requerido si type es 'spec'."
+                      },
+                      "specVersion": {
+                        "type": "string",
+                        "description": "Versión del estándar (ej. 'v3x'). Requerido si type es 'spec'."
+                      },
+                      "format": {
+                        "type": "string",
+                        "enum": ["yaml", "json"],
+                        "description": "Formato de salida. Requerido si type es 'spec'."
+                      },
+                      "family": {
+                        "type": "string",
+                        "enum": ["rest-api", "messaging", "crud", "graphql"],
+                        "description": "Familia arquitectónica. Requerido si type es 'software'."
+                      },
+                      "language": {
+                        "type": "string",
+                        "enum": ["java", "typescript", "python", "csharp", "go"],
+                        "description": "Lenguaje. Requerido si type es 'software'."
+                      },
+                      "languageVersion": { "type": "string" },
+                      "dialect": { "type": "string" },
+                      "dialectVersion": { "type": "string" },
+                      "templateOverlays": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      },
+                      "artifacts": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Nombre de las plantillas a ejecutar (ej. 'main' para specs, 'model' o 'controller' para software)."
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

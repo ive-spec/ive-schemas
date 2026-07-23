@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IVE Platform Catalog Schema",
+  "description": "Esquema para validar el catálogo centralizado de la plataforma (Requisitos, Perfiles, Views y Errores).",
+  "type": "object",
+  "required": ["standardViews", "requirements", "envelopeProfiles", "errors"],
+  "properties": {
+    "standardViews": {
+      "type": "object",
+      "description": "Diccionario de Views estándar corporativas.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description", "schema"],
+        "properties": {
+          "description": { "type": "string" },
+          "schema": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "description": "Diccionario de requisitos atómicos conceptuales.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description", "httpMapping"],
+        "properties": {
+          "description": { "type": "string" },
+          "httpMapping": {
+            "type": "object",
+            "properties": {
+              "requestHeaders": { "type": "array", "items": { "type": "string" } },
+              "responseHeaders": { "type": "array", "items": { "type": "string" } },
+              "failureCode": { "type": "integer" },
+              "failureView": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "envelopeProfiles": {
+      "type": "object",
+      "description": "Diccionario de perfiles de envelope (combinaciones estándar de requisitos).",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description", "requirements"],
+        "properties": {
+          "description": { "type": "string" },
+          "requirements": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "errors": {
+      "type": "object",
+      "description": "Catálogo de códigos de error HTTP estandarizados.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["code", "description", "category"],
+        "properties": {
+          "code": { "type": "integer" },
+          "description": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": ["success", "redirection", "clientError", "serverError"]
+          },
+          "view": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

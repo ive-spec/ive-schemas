@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IVE Overlay Schema",
+  "description": "Esquema genérico para validar cualquier documento IVE Overlay",
+  "type": "object",
+  "required": ["overlay"],
+  "properties": {
+    "overlay": {
+      "type": "object",
+      "required": ["schemaVersion", "targets"],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "enum": ["1.0"],
+          "description": "Versión del formato de overlay."
+        },
+        "description": {
+          "type": "string",
+          "description": "Descripción del propósito de este overlay."
+        },
+        "targets": {
+          "type": "array",
+          "description": "Lista de objetivos a los que se aplicarán las extensiones.",
+          "items": {
+            "type": "object",
+            "required": ["target", "extensions"],
+            "properties": {
+              "target": {
+                "type": "string",
+                "description": "Expresión JSONPath que apunta al nodo de la especificación base (ej. '$', '$.intents.AddPet')."
+              },
+              "extensions": {
+                "type": "object",
+                "description": "Objeto que contiene las extensiones tecnológicas a inyectar.",
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
