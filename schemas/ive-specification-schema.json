@@ -42,7 +42,12 @@
         "required": ["condition"],
         "properties": {
           "condition": { "type": "string" },
-          "view": { "type": "string" }
+          "view": {
+            "type": "object",
+            "required": ["$ref"],
+            "properties": { "$ref": { "type": "string" } },
+            "additionalProperties": false
+          }
         }
       }
     },
