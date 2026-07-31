@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ive-spec/ive-schemas/main/schemas/overlay-schema.json",
+  "title": "IVE Overlay Schema",
+  "description": "Single schema for any overlay, regardless of target technology. Technology-specific rules (Java today; others as they're added) are expressed as conditional (if/then) blocks below, not as separate files — one schema is enough as long as each technology's rules only activate when that technology's extensions.* key is actually present.",
+  "type": "object",
+  "required": ["overlay"],
+  "additionalProperties": false,
+  "properties": {
+    "overlay": {
+      "type": "object",
+      "required": ["schemaVersion", "targets"],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "type": "string" },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/overlayTarget" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "overlayTarget": {
+      "type": "object",
+      "required": ["target"],
+      "additionalProperties": true,
+      "properties": {
+        "target": {
+          "type": "string",
+          "pattern": "^\\$\\.",
+          "description": "JSONPath-style target, e.g. '$.extensions.java' or '$.intents.X.extensions.openapi'."
+        },
+        "extensions": {
+          "type": "object",
+          "properties": {
+            "java": { "$ref": "#/$defs/javaExtension" }
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "extensions": {
+            "type": "object",
+            "required": ["java"]
+          }
+        },
+        "required": ["extensions"]
+      },
+      "then": {
+        "properties": {
+          "extensions": {
+            "properties": {
+              "java": { "$ref": "#/$defs/javaExtension" }
+            }
+          }
+        }
+      }
+    },
+    "javaExtension": {
+      "type": "object",
+      "description": "`basePackage` is intentionally OPTIONAL here — it can also come from `vars.basePkgPath` in ive.config.json, resolved via the `javaPackageFromPath` helper inside adapter.hbs. Whether AT LEAST ONE of these two sources supplies it can't be expressed in this schema alone (that would require checking a separate file) — enforce it in application code instead.",
+      "properties": {
+        "basePackage": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)*$"
+        },
+        "packages": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "e.g. { intents: '...', flow: '...', api: '...' } — per-artifact-group Java package suffixes."
+        }
+      }
+    }
+  }
+}
