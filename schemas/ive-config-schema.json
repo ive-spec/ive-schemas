@@ -17,14 +17,12 @@
     "activeGenerations": {
       "type": "array",
       "items": { "type": "string" },
-      "minItems": 1,
-      "description": "Names of the generations (keys of 'generations') to run by default when no specific generation is passed via CLI."
+      "description": "Names of the generations (keys of 'generations') to run by default when no specific generation is passed via CLI. Can be empty right after 'ive init' — nothing to generate yet, not structurally invalid."
     },
     "generations": {
       "type": "object",
-      "minProperties": 1,
       "additionalProperties": { "$ref": "#/definitions/generationConfig" },
-      "description": "Map of generation name -> its configuration."
+      "description": "Map of generation name -> its configuration. Can be empty right after 'ive init'."
     },
     "dependencies": {
       "type": "object",
