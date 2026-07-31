@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/ive-spec/ive-schemas/main/schemas/ive-config-schema.json",
   "title": "IVE Project Configuration (ive.config.json)",
   "type": "object",
@@ -23,7 +23,7 @@
     "generations": {
       "type": "object",
       "minProperties": 1,
-      "additionalProperties": { "$ref": "#/$defs/generationConfig" },
+      "additionalProperties": { "$ref": "#/definitions/generationConfig" },
       "description": "Map of generation name -> its configuration."
     },
     "dependencies": {
@@ -68,7 +68,7 @@
       "description": "If false, does NOT expand $refs from the base spec."
     }
   },
-  "$defs": {
+  "definitions": {
     "generationConfig": {
       "type": "object",
       "additionalProperties": false,
@@ -122,7 +122,7 @@
         "artifacts": {
           "type": "object",
           "minProperties": 1,
-          "additionalProperties": { "$ref": "#/$defs/artifactConfig" }
+          "additionalProperties": { "$ref": "#/definitions/artifactConfig" }
         },
         "expandOverlayRefs": { "type": "boolean" },
         "resolveSpecRefs": { "type": "boolean" }
