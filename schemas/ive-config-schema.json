@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ive-spec/ive-schemas/main/schemas/ive-config-schema.json",
+  "title": "IVE Project Configuration (ive.config.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["activeGenerations", "generations"],
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "description": "Project name. If omitted, defaults to the current working directory's name (sanitized: non-alphanumeric characters replaced with '-')."
+    },
+    "spec": {
+      "type": "string",
+      "description": "Path to the base spec.ive.yaml. Defaults to 'spec.ive.yaml' if omitted."
+    },
+    "activeGenerations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Names of the generations (keys of 'generations') to run by default when no specific generation is passed via CLI."
+    },
+    "generations": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/generationConfig" },
+      "description": "Map of generation name -> its configuration."
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["adapterSource"],
+        "properties": {
+          "adapterSource": {
+            "type": "string",
+            "description": "Path or URL to an adapter-sdk.json this dependency resolves to."
+          }
+        }
+      },
+      "description": "Map of dependency name (referenced from the spec) -> where to load its adapter-sdk.json from (local path or URL)."
+    },
+    "outputDirectory": {
+      "type": "string",
+      "description": "Project-wide default output root. Individual generations can override this."
+    },
+    "vars": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "propertyNames": {
+        "not": { "const": "projectName" }
+      },
+      "description": "Custom variables, substituted like {projectName} in fileName/fileNamePattern/outputDirectory/relativePath/templateRoots. Cannot contain a key literally named 'projectName' (reserved)."
+    },
+    "platformCatalog": {
+      "type": "string",
+      "description": "Path or URL to the platform catalog (Envelope requirements/errors/profiles), used to infer/validate errors from Envelope requirements. Same local-or-remote mechanism as dependencies.adapterSource."
+    },
+    "expandOverlayRefs": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, expands $refs added by overlays inline."
+    },
+    "resolveSpecRefs": {
+      "type": "boolean",
+      "default": true,
+      "description": "If false, does NOT expand $refs from the base spec."
+    }
+  },
+  "$defs": {
+    "generationConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["artifacts"] },
+        { "required": ["extends"] }
+      ],
+      "properties": {
+        "extends": {
+          "type": "string",
+          "description": "Path to a base generation config (YAML/JSON) to deep-merge with this one."
+        },
+        "source": {
+          "type": "string",
+          "description": "Overrides the input source for this generation (defaults to the project's base spec)."
+        },
+        "sourceType": {
+          "type": "string",
+          "enum": ["spec", "adapter"],
+          "default": "spec"
+        },
+        "templateRoots": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Template repositories to load, in cascade order (later roots override same-named helpers from earlier ones)."
+        },
+        "overlays": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Overlay names/paths to apply, in order. A bare name (no extension) resolves to '<configDir>/overlays/<name>.ive.yaml'; a name with any extension is used as-is."
+        },
+        "outputDirectory": {
+          "type": "string",
+          "description": "Root output directory for this generation. Supports {projectName} and any declared 'vars' key."
+        },
+        "adapter": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fileName": {
+              "type": "string",
+              "description": "Defaults to 'adapter.json'. Supports {projectName} and 'vars'."
+            },
+            "outputDirectory": {
+              "type": "string",
+              "description": "Defaults to '<generation outputDirectory>/adapters'. Supports {projectName} and 'vars'."
+            }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/artifactConfig" }
+        },
+        "expandOverlayRefs": { "type": "boolean" },
+        "resolveSpecRefs": { "type": "boolean" }
+      }
+    },
+    "artifactConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "scope"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "scope": {
+          "type": "string",
+          "enum": ["global", "perIntent", "perFlow", "perView", "perGroup"]
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Required in practice when scope is 'global' (or a sensible default of '<artifactType>.out' is used)."
+        },
+        "fileNamePattern": {
+          "type": "string",
+          "description": "Required in practice for perIntent/perFlow/perView/perGroup scopes (uses {IntentName}/{FlowName}/{ViewName}/{GroupName} placeholders accordingly)."
+        },
+        "outputDirectory": {
+          "type": "string",
+          "description": "Supports {projectName} and any declared 'vars' key."
+        },
+        "relativePath": {
+          "type": "string",
+          "deprecated": true,
+          "description": "Deprecated — use 'outputDirectory' instead."
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Names (Intent/Flow/View) to skip for this artifact, even if present in the adapter."
+        }
+      }
+    }
+  }
+}
