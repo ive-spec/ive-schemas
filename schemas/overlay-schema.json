@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/ive-spec/ive-schemas/main/schemas/overlay-schema.json",
   "title": "IVE Overlay Schema",
-  "description": "Single schema for any overlay, regardless of target technology. Technology-specific rules (Java today; others as they're added) are expressed as conditional (if/then) blocks below, not as separate files — one schema is enough as long as each technology's rules only activate when that technology's extensions.* key is actually present.",
+  "description": "Single schema for any overlay, regardless of target technology. Technology/concept-specific rules (Java, trigger, ...) are expressed as conditional (if/then) blocks below, keyed off the TARGET PATH itself (not a nested content shape) — matching how overlays are actually written in this project: the target path navigates directly to the extension node, and the type-specific fields are the DIRECT properties of that same target entry.",
   "type": "object",
   "required": ["overlay"],
   "additionalProperties": false,
@@ -30,36 +30,21 @@
         "target": {
           "type": "string",
           "pattern": "^\\$\\.",
-          "description": "JSONPath-style target, e.g. '$.extensions.java' or '$.intents.X.extensions.openapi'."
-        },
-        "extensions": {
-          "type": "object",
-          "properties": {
-            "java": { "$ref": "#/definitions/javaExtension" }
-          }
+          "description": "JSONPath-style target, e.g. '$.extensions.java' or '$.flows.X.extensions.trigger'."
         }
       },
-      "if": {
-        "properties": {
-          "extensions": {
-            "type": "object",
-            "required": ["java"]
-          }
+      "allOf": [
+        {
+          "if": { "properties": { "target": { "pattern": "\\.extensions\\.java$" } }, "required": ["target"] },
+          "then": { "$ref": "#/definitions/javaExtension" }
         },
-        "required": ["extensions"]
-      },
-      "then": {
-        "properties": {
-          "extensions": {
-            "properties": {
-              "java": { "$ref": "#/definitions/javaExtension" }
-            }
-          }
+        {
+          "if": { "properties": { "target": { "pattern": "\\.extensions\\.trigger$" } }, "required": ["target"] },
+          "then": { "$ref": "#/definitions/triggerExtension" }
         }
-      }
+      ]
     },
     "javaExtension": {
-      "type": "object",
       "description": "`basePackage` is intentionally OPTIONAL here — it can also come from `vars.basePkgPath` in ive.config.json, resolved via the `javaPackageFromPath` helper inside adapter.hbs. Whether AT LEAST ONE of these two sources supplies it can't be expressed in this schema alone (that would require checking a separate file) — enforce it in application code instead.",
       "properties": {
         "basePackage": {
@@ -72,6 +57,52 @@
           "description": "e.g. { intents: '...', flow: '...', api: '...' } — per-artifact-group Java package suffixes."
         }
       }
+    },
+    "triggerExtension": {
+      "description": "What invokes a Flow (or, in principle, an Intent) — deliberately an implementation detail, not part of the conceptual spec (an Intent/Flow's meaning never depends on who/what calls it — see the Intent definition itself). 'invocation' is the default assumed when no trigger overlay is present at all; it's included here as an explicit option too, for clarity.",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["invocation", "schedule", "event", "signal", "condition"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "schedule" } } },
+          "then": {
+            "required": ["cron"],
+            "properties": {
+              "cron": { "type": "string", "description": "Cron expression, e.g. '0 0 1 * *'." },
+              "timezone": { "type": "string", "description": "IANA timezone, e.g. 'America/Argentina/Buenos_Aires'. Defaults to the deploying system's own timezone if omitted." }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "event" } } },
+          "then": {
+            "required": ["channel"],
+            "properties": {
+              "channel": { "type": "string", "description": "The channel/topic this Flow reacts to." }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "signal" } } },
+          "then": {
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "description": "The broadcast signal name this Flow reacts to." }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "condition" } } },
+          "then": {
+            "required": ["expression"],
+            "properties": {
+              "expression": { "type": "string", "description": "A boolean expression, engine/language not prescribed by this schema — evaluated by whatever generation target implements this trigger type." }
+            }
+          }
+        }
+      ]
     }
   }
 }
