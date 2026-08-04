@@ -1,46 +1,240 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/ive-spec/ive-schemas/main/schemas/overlay-schema.json",
   "title": "IVE Overlay Schema",
-  "description": "Esquema genérico para validar cualquier documento IVE Overlay",
+  "description": "Single schema for any overlay, regardless of target technology. Technology/concept-specific rules (Java, trigger, ...) are expressed as conditional (if/then) blocks below, keyed off the TARGET PATH itself (not a nested content shape) — matching how overlays are actually written in this project: the target path navigates directly to the extension node, and the type-specific fields are the DIRECT properties of that same target entry.",
   "type": "object",
-  "required": ["overlay"],
+  "required": [
+    "overlay"
+  ],
+  "additionalProperties": false,
   "properties": {
     "overlay": {
       "type": "object",
-      "required": ["schemaVersion", "targets"],
+      "required": [
+        "schemaVersion",
+        "targets"
+      ],
+      "additionalProperties": false,
       "properties": {
         "schemaVersion": {
-          "type": "string",
-          "enum": ["1.0"],
-          "description": "Versión del formato de overlay."
-        },
-        "description": {
-          "type": "string",
-          "description": "Descripción del propósito de este overlay."
+          "type": "string"
         },
         "targets": {
           "type": "array",
-          "description": "Lista de objetivos a los que se aplicarán las extensiones.",
+          "minItems": 1,
           "items": {
-            "type": "object",
-            "required": ["target", "extensions"],
-            "properties": {
-              "target": {
-                "type": "string",
-                "description": "Expresión JSONPath que apunta al nodo de la especificación base (ej. '$', '$.intents.AddPet')."
-              },
-              "extensions": {
-                "type": "object",
-                "description": "Objeto que contiene las extensiones tecnológicas a inyectar.",
-                "additionalProperties": true
-              }
-            },
-            "additionalProperties": false
+            "$ref": "#/definitions/overlayTarget"
           }
+        },
+        "description": {
+          "type": "string",
+          "description": "Descripción breve de para qué sirve este overlay - opcional, solo documentación."
         }
-      },
-      "additionalProperties": false
+      }
     }
   },
-  "additionalProperties": false
+  "definitions": {
+    "overlayTarget": {
+      "type": "object",
+      "required": [
+        "target"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "target": {
+          "type": "string",
+          "pattern": "^\\$\\.",
+          "description": "JSONPath-style target, e.g. '$.extensions.java' or '$.flows.X.extensions.trigger'."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "target": {
+                "pattern": "\\.extensions\\.java$"
+              }
+            },
+            "required": [
+              "target"
+            ]
+          },
+          "then": {
+            "$ref": "#/definitions/javaExtension"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "target": {
+                "pattern": "\\.extensions\\.trigger$"
+              }
+            },
+            "required": [
+              "target"
+            ]
+          },
+          "then": {
+            "$ref": "#/definitions/triggerExtension"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "target": {
+                "pattern": "\\.extensions\\.generation$"
+              }
+            },
+            "required": [
+              "target"
+            ]
+          },
+          "then": {
+            "$ref": "#/definitions/generationExtension"
+          }
+        }
+      ]
+    },
+    "javaExtension": {
+      "description": "`basePackage` is intentionally OPTIONAL here — it can also come from `vars.basePkgPath` in ive.config.json, resolved via the `javaPackageFromPath` helper inside adapter.hbs. Whether AT LEAST ONE of these two sources supplies it can't be expressed in this schema alone (that would require checking a separate file) — enforce it in application code instead.",
+      "properties": {
+        "basePackage": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)*$"
+        },
+        "packages": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "e.g. { intents: '...', flow: '...', api: '...' } — per-artifact-group Java package suffixes."
+        }
+      }
+    },
+    "triggerExtension": {
+      "description": "What invokes a Flow (or, in principle, an Intent) — deliberately an implementation detail, not part of the conceptual spec (an Intent/Flow's meaning never depends on who/what calls it — see the Intent definition itself). 'invocation' is the default assumed when no trigger overlay is present at all; it's included here as an explicit option too, for clarity.",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "invocation",
+            "schedule",
+            "event",
+            "signal",
+            "condition"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "schedule"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "cron"
+            ],
+            "properties": {
+              "cron": {
+                "type": "string",
+                "description": "Cron expression, e.g. '0 0 1 * *'."
+              },
+              "timezone": {
+                "type": "string",
+                "description": "IANA timezone, e.g. 'America/Argentina/Buenos_Aires'. Defaults to the deploying system's own timezone if omitted."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "event"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "channel"
+            ],
+            "properties": {
+              "channel": {
+                "type": "string",
+                "description": "The channel/topic this Flow reacts to."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "signal"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The broadcast signal name this Flow reacts to."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "condition"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "expression"
+            ],
+            "properties": {
+              "expression": {
+                "type": "string",
+                "description": "A boolean expression, engine/language not prescribed by this schema — evaluated by whatever generation target implements this trigger type."
+              }
+            }
+          }
+        }
+      ]
+    },
+    "generationExtension": {
+      "description": "Per-View generation control. 'as' picks which mutually-exclusive artifact variant this View represents (e.g. 'entity' vs 'record') — an artifact only applies to a View if the artifact's own config declares the same 'as' value; a View without 'as' matches no 'as'-restricted artifact (no automatic guessing). 'skip' independently excludes specific artifacts for this View regardless of 'as'. 'domain' is used for the {domain} placeholder in fileNamePattern/outputDirectory — mainly meaningful for canonicalViews from the platform catalog, which are already organized by domain there. The contradiction rule (a View declaring 'as: X' while also listing X in its own 'skip') is enforced at generation time (artifacts.ts throws), not by this schema — expressing 'a string property's value must not appear in a sibling array property' isn't practical in standard JSON Schema.",
+      "properties": {
+        "as": {
+          "type": "string",
+          "description": "Must match an artifact's own 'as' (in ive.config.json) to apply. No enum here — the set of valid values is defined by whatever artifacts a given generation configures, not by this schema."
+        },
+        "skip": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Artifact type names (matching keys under ive.config.json's 'artifacts') to never generate for this View, regardless of 'as'."
+        },
+        "domain": {
+          "type": "string",
+          "description": "Substituted into the {domain} placeholder in fileNamePattern/outputDirectory. Typically set as a default on the canonicalViews catalog entry itself (directly, no 'extensions' wrapper — catalog's own convention), overridable per-project via this overlay extension."
+        }
+      }
+    }
+  }
 }
