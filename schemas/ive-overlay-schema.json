@@ -217,12 +217,8 @@
       ]
     },
     "generationExtension": {
-      "description": "Per-View generation control. 'as' picks which mutually-exclusive artifact variant this View represents (e.g. 'entity' vs 'record') — an artifact only applies to a View if the artifact's own config declares the same 'as' value; a View without 'as' matches no 'as'-restricted artifact (no automatic guessing). 'skip' independently excludes specific artifacts for this View regardless of 'as'. 'domain' is used for the {domain} placeholder in fileNamePattern/outputDirectory — mainly meaningful for canonicalViews from the platform catalog, which are already organized by domain there. The contradiction rule (a View declaring 'as: X' while also listing X in its own 'skip') is enforced at generation time (artifacts.ts throws), not by this schema — expressing 'a string property's value must not appear in a sibling array property' isn't practical in standard JSON Schema.",
+      "description": "Per-View generation control. 'filterValue' picks which mutually-exclusive artifact variant this View represents (e.g. 'entity' vs 'record') — an artifact only applies to a View if the artifact's own config declares a matching 'filter' (either 'filter: true', comparing against the artifact's own key name, or 'filter: \"X\"' comparing against an explicit string). A View without 'filterValue' matches no filter-restricted artifact (no automatic guessing). 'skip' independently excludes specific artifacts for this View regardless of 'as'. 'domain' is used for the {domain} placeholder in fileNamePattern/outputDirectory — mainly meaningful for canonicalViews from the platform catalog, which are already organized by domain there. The contradiction rule (a View declaring 'filterValue: X' while also listing X in its own 'skip') is enforced at generation time (artifacts.ts throws), not by this schema — expressing 'a string property's value must not appear in a sibling array property' isn't practical in standard JSON Schema.",
       "properties": {
-        "as": {
-          "type": "string",
-          "description": "Must match an artifact's own 'as' (in ive.config.json) to apply. No enum here — the set of valid values is defined by whatever artifacts a given generation configures, not by this schema."
-        },
         "skip": {
           "type": "array",
           "items": {
@@ -233,6 +229,10 @@
         "domain": {
           "type": "string",
           "description": "Substituted into the {domain} placeholder in fileNamePattern/outputDirectory. Typically set as a default on the canonicalViews catalog entry itself (directly, no 'extensions' wrapper — catalog's own convention), overridable per-project via this overlay extension."
+        },
+        "filterValue": {
+          "type": "string",
+          "description": "Must match an artifact's effective filter value (its own key name if 'filter: true', or the explicit string if 'filter: \"X\"') to apply. No enum here — the set of valid values is defined by whatever artifacts a given generation configures, not by this schema."
         }
       }
     }
