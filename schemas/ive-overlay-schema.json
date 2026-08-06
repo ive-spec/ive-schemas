@@ -113,7 +113,7 @@
       }
     },
     "triggerExtension": {
-      "description": "What invokes a Flow (or, in principle, an Intent) — deliberately an implementation detail, not part of the conceptual spec (an Intent/Flow's meaning never depends on who/what calls it — see the Intent definition itself). 'invocation' is the default assumed when no trigger overlay is present at all; it's included here as an explicit option too, for clarity.",
+      "description": "What invokes a Flow or Intent — deliberately an implementation detail, not part of the conceptual spec (an Intent/Flow's meaning never depends on who/what calls it — see the Intent definition itself). 'invocation' is the default assumed when no trigger overlay is present at all; it's included here as an explicit option too, for clarity. 'http-webhook' is Intent-specific — a third party calls this Intent (unlike every other trigger type, where something internal to the system initiates the call) — see webhookName/path under that same Intent's extensions.openapi target.",
       "required": [
         "type"
       ],
@@ -125,7 +125,8 @@
             "schedule",
             "event",
             "signal",
-            "condition"
+            "condition",
+            "http-webhook"
           ]
         }
       },
