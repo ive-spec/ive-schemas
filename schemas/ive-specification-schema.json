@@ -2,14 +2,28 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "IVE Base Specification Schema",
   "type": "object",
-  "required": ["specification", "views", "intents"],
+  "required": [
+    "specification",
+    "views",
+    "intents"
+  ],
   "properties": {
     "specification": {
       "type": "object",
-      "required": ["schemaVersion", "version"],
+      "required": [
+        "schemaVersion",
+        "version"
+      ],
       "properties": {
-        "schemaVersion": { "type": "string", "enum": ["1.0"] },
-        "version": { "type": "string" }
+        "schemaVersion": {
+          "type": "string",
+          "enum": [
+            "1.0"
+          ]
+        },
+        "version": {
+          "type": "string"
+        }
       }
     },
     "views": {
@@ -25,11 +39,15 @@
       "description": "Diccionario de Envelopes locales (opcional, se prefieren perfiles del catálogo)",
       "additionalProperties": {
         "type": "object",
-        "required": ["requirements"],
+        "required": [
+          "requirements"
+        ],
         "properties": {
           "requirements": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           }
         }
       }
@@ -39,13 +57,23 @@
       "description": "Catálogo de errores de dominio",
       "additionalProperties": {
         "type": "object",
-        "required": ["condition"],
+        "required": [
+          "conditions"
+        ],
         "properties": {
-          "condition": { "type": "string" },
+          "conditions": {
+            "$ref": "#/definitions/conditions"
+          },
           "view": {
             "type": "object",
-            "required": ["$ref"],
-            "properties": { "$ref": { "type": "string" } },
+            "required": [
+              "$ref"
+            ],
+            "properties": {
+              "$ref": {
+                "type": "string"
+              }
+            },
             "additionalProperties": false
           }
         }
@@ -56,31 +84,52 @@
       "description": "Diccionario de Intents",
       "additionalProperties": {
         "type": "object",
-        "required": ["is", "description"],
+        "required": [
+          "is",
+          "description"
+        ],
         "properties": {
           "is": {
             "type": "string",
-            "enum": ["Create", "Update", "Replace", "Delete", "Query"]
+            "enum": [
+              "Create",
+              "Update",
+              "Replace",
+              "Delete",
+              "Query"
+            ]
           },
-          "description": { "type": "string" },
+          "description": {
+            "type": "string"
+          },
           "view": {
             "type": "object",
             "properties": {
-              "input": { "type": "object" },
-              "output": { "type": "object" }
+              "input": {
+                "type": "object"
+              },
+              "output": {
+                "type": "object"
+              }
             }
           },
           "envelope": {
             "type": "object",
             "properties": {
-              "input": { "type": "object" },
-              "output": { "type": "object" }
+              "input": {
+                "type": "object"
+              },
+              "output": {
+                "type": "object"
+              }
             },
             "additionalProperties": false
           },
           "errors": {
             "type": "array",
-            "items": { "type": "object" }
+            "items": {
+              "$ref": "#/definitions/errorRef"
+            }
           }
         }
       }
@@ -88,7 +137,9 @@
     "flows": {
       "type": "object",
       "description": "Diccionario de Flows (Macro-Intents). Sección opcional: puede no existir en especificaciones sin orquestación multi-step.",
-      "additionalProperties": { "$ref": "#/definitions/flow" }
+      "additionalProperties": {
+        "$ref": "#/definitions/flow"
+      }
     },
     "extensions": {
       "type": "object",
@@ -98,143 +149,298 @@
   "definitions": {
     "flow": {
       "type": "object",
-      "required": ["description", "steps"],
+      "required": [
+        "description",
+        "steps"
+      ],
       "properties": {
-        "description": { "type": "string" },
+        "description": {
+          "type": "string"
+        },
         "view": {
           "type": "object",
           "properties": {
-            "input": { "type": "object" },
-            "output": { "type": "object" }
+            "input": {
+              "type": "object"
+            },
+            "output": {
+              "type": "object"
+            }
           }
         },
         "envelope": {
           "type": "object",
           "properties": {
-            "input": { "type": "object" },
-            "output": { "type": "object" }
+            "input": {
+              "type": "object"
+            },
+            "output": {
+              "type": "object"
+            }
           }
         },
         "errors": {
           "type": "array",
-          "items": { "type": "object" }
+          "items": {
+            "$ref": "#/definitions/errorRef"
+          }
         },
         "steps": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/definitions/step" }
+          "items": {
+            "$ref": "#/definitions/step"
+          }
         },
-        "onFailure": { "$ref": "#/definitions/rootOnFailure" }
+        "onFailure": {
+          "$ref": "#/definitions/rootOnFailure"
+        }
       },
       "additionalProperties": false
     },
     "step": {
       "type": "object",
-      "required": ["stepId"],
+      "required": [
+        "stepId"
+      ],
       "properties": {
-        "stepId": { "type": "string" },
+        "stepId": {
+          "type": "string"
+        },
         "intent": {
           "type": "object",
-          "required": ["$ref"],
-          "properties": { "$ref": { "type": "string" } }
+          "required": [
+            "$ref"
+          ],
+          "properties": {
+            "$ref": {
+              "type": "string"
+            }
+          }
         },
         "flow": {
           "type": "object",
-          "required": ["$ref"],
-          "properties": { "$ref": { "type": "string" } }
+          "required": [
+            "$ref"
+          ],
+          "properties": {
+            "$ref": {
+              "type": "string"
+            }
+          }
         },
         "inputs": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "outputs": {
           "type": "object",
           "description": "Only for terminatesAs: success steps — symmetric to errorRef on terminatesAs: failure steps. Maps the flow's own output View fields to expressions ({$steps.X.outputs.Y} / {$view.input.Z}).",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "dependsOn": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "compensate": {
           "type": "object",
-          "required": ["intent"],
+          "required": [
+            "intent"
+          ],
           "properties": {
             "intent": {
               "type": "object",
-              "required": ["$ref"],
-              "properties": { "$ref": { "type": "string" } }
+              "required": [
+                "$ref"
+              ],
+              "properties": {
+                "$ref": {
+                  "type": "string"
+                }
+              }
             },
             "inputs": {
               "type": "object",
-              "additionalProperties": { "type": "string" }
+              "additionalProperties": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false
         },
         "terminatesAs": {
           "type": "string",
-          "enum": ["success", "failure"]
+          "enum": [
+            "success",
+            "failure"
+          ]
         },
-        "errorRef": { "type": "string" },
+        "errorRef": {
+          "type": "string"
+        },
         "onFailure": {
           "type": "array",
-          "items": { "$ref": "#/definitions/onFailureRule" }
+          "items": {
+            "$ref": "#/definitions/onFailureRule"
+          }
         }
       },
       "oneOf": [
-        { "required": ["intent"], "not": { "required": ["flow"] } },
-        { "required": ["flow"], "not": { "required": ["intent"] } }
+        {
+          "required": [
+            "intent"
+          ],
+          "not": {
+            "required": [
+              "flow"
+            ]
+          }
+        },
+        {
+          "required": [
+            "flow"
+          ],
+          "not": {
+            "required": [
+              "intent"
+            ]
+          }
+        }
       ],
       "additionalProperties": false
     },
     "onFailureRule": {
       "type": "object",
-      "required": ["criteria", "action"],
+      "required": [
+        "criteria",
+        "action"
+      ],
       "properties": {
-        "criteria": { "type": "string" },
+        "criteria": {
+          "type": "string"
+        },
         "action": {
           "type": "string",
-          "enum": ["retry", "goto", "continue"]
+          "enum": [
+            "retry",
+            "goto",
+            "continue"
+          ]
         },
-        "maxAttempts": { "type": "integer", "minimum": 1 },
-        "backoff": { "type": "string" },
+        "maxAttempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "backoff": {
+          "type": "string"
+        },
         "onExhausted": {
           "type": "object",
-          "required": ["action", "target"],
+          "required": [
+            "action",
+            "target"
+          ],
           "properties": {
-            "action": { "type": "string", "enum": ["goto"] },
-            "target": { "type": "string" }
+            "action": {
+              "type": "string",
+              "enum": [
+                "goto"
+              ]
+            },
+            "target": {
+              "type": "string"
+            }
           },
           "additionalProperties": false
         },
-        "target": { "type": "string" },
-        "skipCompensation": { "type": "boolean", "default": false }
+        "target": {
+          "type": "string"
+        },
+        "skipCompensation": {
+          "type": "boolean",
+          "default": false
+        }
       },
       "if": {
-        "properties": { "action": { "const": "retry" } }
+        "properties": {
+          "action": {
+            "const": "retry"
+          }
+        }
       },
       "then": {
-        "required": ["onExhausted", "maxAttempts"]
+        "required": [
+          "onExhausted",
+          "maxAttempts"
+        ]
       },
       "additionalProperties": false
     },
     "rootOnFailure": {
       "type": "object",
-      "required": ["action"],
+      "required": [
+        "action"
+      ],
       "properties": {
-        "action": { "type": "string", "enum": ["escalate"] },
+        "action": {
+          "type": "string",
+          "enum": [
+            "escalate"
+          ]
+        },
         "notify": {
           "type": "object",
-          "required": ["intent"],
+          "required": [
+            "intent"
+          ],
           "properties": {
             "intent": {
               "type": "object",
-              "required": ["$ref"],
-              "properties": { "$ref": { "type": "string" } }
+              "required": [
+                "$ref"
+              ],
+              "properties": {
+                "$ref": {
+                  "type": "string"
+                }
+              }
             }
           },
           "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "conditions": {
+      "type": "object",
+      "description": "Causas por las que puede darse este error. La CLAVE es un identificador estable, la que usa el codigo generado para referirse a una causa puntual (enum, constante); el MENSAJE es el texto con el que el error se lanza en runtime, y puede reescribirse (redaccion, traduccion) sin romper nada que lo referencie. Misma forma en el catalogo y en el Intent: si un Intent declara una condicion cuya clave YA existe en la entrada del catalogo, es el mismo error y no se agrega nada; si la clave es nueva, es una causa propia de la logica del Intent y convive con la del catalogo bajo el mismo codigo HTTP.",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-zA-Z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "errorRef": {
+      "type": "object",
+      "description": "Referencia a una entrada del catalogo de errores, con las condiciones propias del Intent si las tiene.",
+      "required": [
+        "$ref"
+      ],
+      "properties": {
+        "$ref": {
+          "type": "string"
+        },
+        "conditions": {
+          "$ref": "#/definitions/conditions"
         }
       },
       "additionalProperties": false
