@@ -4,7 +4,10 @@
   "title": "IVE Project Configuration (ive.config.json)",
   "type": "object",
   "additionalProperties": false,
-  "required": ["activeGenerations", "generations"],
+  "required": [
+    "activeGenerations",
+    "generations"
+  ],
   "properties": {
     "projectName": {
       "type": "string",
@@ -16,12 +19,16 @@
     },
     "activeGenerations": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Names of the generations (keys of 'generations') to run by default when no specific generation is passed via CLI. Can be empty right after 'ive init' — nothing to generate yet, not structurally invalid."
     },
     "generations": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/definitions/generationConfig" },
+      "additionalProperties": {
+        "$ref": "#/definitions/generationConfig"
+      },
       "description": "Map of generation name -> its configuration. Can be empty right after 'ive init'."
     },
     "dependencies": {
@@ -29,7 +36,9 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["adapterSource"],
+        "required": [
+          "adapterSource"
+        ],
         "properties": {
           "adapterSource": {
             "type": "string",
@@ -39,15 +48,43 @@
       },
       "description": "Map of dependency name (referenced from the spec) -> where to load its adapter-sdk.json from (local path or URL)."
     },
+    "projects": {
+      "type": "object",
+      "description": "Map of linked project name -> where that project lives. The path is relative to this config file. A flow step can reference an Intent of a linked project with $ref: <path>/spec.ive.yaml#/intents/Name; the resolver imports it at generation time. Declaring it here is what lets tooling offer those Intents and their fields instead of having the path typed by hand.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory of the linked project, relative to this config file."
+          },
+          "spec": {
+            "type": "string",
+            "description": "Spec file inside that directory. Defaults to spec.ive.yaml."
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "outputDirectory": {
       "type": "string",
       "description": "Project-wide default output root. Individual generations can override this."
     },
     "vars": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
+      "additionalProperties": {
+        "type": "string"
+      },
       "propertyNames": {
-        "not": { "const": "projectName" }
+        "not": {
+          "const": "projectName"
+        }
       },
       "description": "Custom variables, substituted like {projectName} in fileName/fileNamePattern/outputDirectory/relativePath/templateRoots. Cannot contain a key literally named 'projectName' (reserved)."
     },
@@ -71,8 +108,16 @@
       "type": "object",
       "additionalProperties": false,
       "anyOf": [
-        { "required": ["artifacts"] },
-        { "required": ["extends"] }
+        {
+          "required": [
+            "artifacts"
+          ]
+        },
+        {
+          "required": [
+            "extends"
+          ]
+        }
       ],
       "properties": {
         "extends": {
@@ -85,18 +130,25 @@
         },
         "sourceType": {
           "type": "string",
-          "enum": ["spec", "adapter"],
+          "enum": [
+            "spec",
+            "adapter"
+          ],
           "default": "spec"
         },
         "templateRoots": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "minItems": 1,
           "description": "Template repositories to load, in cascade order (later roots override same-named helpers from earlier ones)."
         },
         "overlays": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Overlay names/paths to apply, in order. A bare name (no extension) resolves to '<configDir>/overlays/<name>.ive.yaml'; a name with any extension is used as-is."
         },
         "outputDirectory": {
@@ -120,21 +172,38 @@
         "artifacts": {
           "type": "object",
           "minProperties": 1,
-          "additionalProperties": { "$ref": "#/definitions/artifactConfig" }
+          "additionalProperties": {
+            "$ref": "#/definitions/artifactConfig"
+          }
         },
-        "expandOverlayRefs": { "type": "boolean" },
-        "resolveSpecRefs": { "type": "boolean" }
+        "expandOverlayRefs": {
+          "type": "boolean"
+        },
+        "resolveSpecRefs": {
+          "type": "boolean"
+        }
       }
     },
     "artifactConfig": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["enabled", "scope"],
+      "required": [
+        "enabled",
+        "scope"
+      ],
       "properties": {
-        "enabled": { "type": "boolean" },
+        "enabled": {
+          "type": "boolean"
+        },
         "scope": {
           "type": "string",
-          "enum": ["global", "perIntent", "perFlow", "perView", "perGroup"]
+          "enum": [
+            "global",
+            "perIntent",
+            "perFlow",
+            "perView",
+            "perGroup"
+          ]
         },
         "fileName": {
           "type": "string",
@@ -155,7 +224,9 @@
         },
         "exclude": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Names (Intent/Flow/View) to skip for this artifact, even if present in the adapter."
         }
       }
