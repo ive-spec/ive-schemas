@@ -43,6 +43,10 @@
           "adapterSource": {
             "type": "string",
             "description": "Path or URL to an adapter-sdk.json this dependency resolves to."
+          },
+          "project": {
+            "type": "string",
+            "description": "Name of the linked project (see 'projects') this dependency corresponds to, if any. Display-only metadata for tooling — never resolved or read by the generator itself; 'adapterSource' remains the actual path/URL used."
           }
         }
       },
@@ -89,8 +93,56 @@
       "description": "Custom variables, substituted like {projectName} in fileName/fileNamePattern/outputDirectory/relativePath/templateRoots. Cannot contain a key literally named 'projectName' (reserved)."
     },
     "platformCatalog": {
-      "type": "string",
-      "description": "Path or URL to the platform catalog (Envelope requirements/errors/profiles), used to infer/validate errors from Envelope requirements. Same local-or-remote mechanism as dependencies.adapterSource."
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "A single path or URL to a platform catalog file (legacy form)."
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Multiple paths/URLs to platform catalog files, concatenated with the ones from the system config."
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "basePath": {
+              "type": "string",
+              "description": "Prepended to each entry in 'files' unless that entry is already a full URL or an absolute path."
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "{basePath, files} form — same mechanism used by the system config's own platformCatalog."
+        }
+      ],
+      "description": "Path(s) or URL(s) to the platform catalog (Envelope requirements/errors/profiles), used to infer/validate errors from Envelope requirements. Concatenated with the system config's own list, never overrides it. Same local-or-remote mechanism as dependencies.adapterSource."
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "type": "string",
+          "description": "Override of the validation schema used for ive.config.json itself."
+        },
+        "specification": {
+          "type": "string",
+          "description": "Override of the validation schema used for spec.ive.yaml."
+        },
+        "overlay": {
+          "type": "string",
+          "description": "Override of the validation schema used for overlays."
+        }
+      },
+      "description": "Per-artifact-type (config/specification/overlay) override of which validation schema to use. Overrides the system config's registry entry-by-entry — whatever isn't declared here still comes from there."
     },
     "expandOverlayRefs": {
       "type": "boolean",
