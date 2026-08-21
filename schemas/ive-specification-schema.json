@@ -31,7 +31,30 @@
       "description": "Diccionario de Views (JSON Schema)",
       "additionalProperties": {
         "type": "object",
-        "description": "Definición de una View (debe cumplir con JSON Schema draft 2020-12)"
+        "description": "Definición de una View (debe cumplir con JSON Schema draft 2020-12)",
+        "properties": {
+          "identity": {
+            "$ref": "#/definitions/identity"
+          },
+          "mapping": {
+            "$ref": "#/definitions/viewMapping"
+          },
+          "properties": {
+            "type": "object",
+            "description": "Propiedades de la View. Solo se declaran acá los agregados de IVE; el resto del vocabulario de JSON Schema pasa sin restricción.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "mapping": {
+                  "$ref": "#/definitions/transformChain"
+                },
+                "protectionExposure": {
+                  "$ref": "#/definitions/protectionExposure"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "envelopes": {
@@ -130,6 +153,10 @@
             "items": {
               "$ref": "#/definitions/errorRef"
             }
+          },
+          "trustLevel": {
+            "type": "string",
+            "description": "Quién invoca, independiente de lo que exija el Envelope. Texto libre: es contra esta clave que resuelve protectionExposure.byTrustLevel de las Views. Sin trustLevel no se aplica ninguna protección por nivel de confianza."
           }
         }
       }
@@ -147,6 +174,131 @@
     }
   },
   "definitions": {
+    "identity": {
+      "type": "array",
+      "description": "Clave natural de negocio de la View: qué propiedades hacen que 'este' registro sea el mismo que otro con los mismos valores. No es un id técnico. Sus propiedades forman parte de required.",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "viewMapping": {
+      "type": "object",
+      "description": "Cómo se construye esta View a partir de otra. Solo se declara la excepción: lo que coincide en nombre y forma se mapea solo.",
+      "properties": {
+        "from": {
+          "type": "object",
+          "description": "La View de origen.",
+          "required": [
+            "$ref"
+          ],
+          "properties": {
+            "$ref": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "locals": {
+          "type": "object",
+          "description": "Valores intermedios con nombre propio, referenciables desde cualquier paso igual que una propiedad de origen.",
+          "additionalProperties": {
+            "$ref": "#/definitions/transformChain"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "transformChain": {
+      "type": "object",
+      "description": "Una cadena de pasos: el resultado de cada uno alimenta al siguiente.",
+      "required": [
+        "steps"
+      ],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/transformStep"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "transformStep": {
+      "type": "object",
+      "description": "Un paso de transformación. Es puro: no consulta recursos externos — si hace falta ir a buscar un dato afuera, eso es un Flow, no un paso.",
+      "required": [
+        "operation"
+      ],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "description": "Nombre de la operación. Las disponibles las declara el catálogo de plataforma (transformOperations), agrupadas por tipo de dato. 'custom' no se cataloga: lleva su propio name."
+        },
+        "name": {
+          "type": "string",
+          "description": "Identifica la transformación cuando operation es 'custom'. Quién la implementa es responsabilidad de cada tecnología."
+        },
+        "from": {
+          "type": "array",
+          "description": "Propiedades de origen (o locals) que consume el paso, en orden.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "onNull": {
+          "type": "string",
+          "description": "Qué hacer si la propiedad de origen no trae valor. Solo aplica a propiedades opcionales: una en required no puede llegar nula.",
+          "enum": [
+            "propagate",
+            "useDefault",
+            "omitTarget"
+          ]
+        }
+      }
+    },
+    "exposureRule": {
+      "type": "object",
+      "required": [
+        "technique"
+      ],
+      "properties": {
+        "technique": {
+          "type": "string",
+          "enum": [
+            "none",
+            "mask",
+            "hidden"
+          ]
+        },
+        "showLast": {
+          "type": "integer",
+          "description": "Cuántos caracteres quedan a la vista. Solo tiene sentido con technique: mask.",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "protectionExposure": {
+      "type": "object",
+      "description": "Cómo tratar el valor de esta propiedad según quién la reciba.",
+      "properties": {
+        "byTrustLevel": {
+          "type": "object",
+          "description": "Clave de nivel de confianza → técnica. Las claves son propias de cada organización; IVE no impone ninguna.",
+          "additionalProperties": {
+            "$ref": "#/definitions/exposureRule"
+          }
+        },
+        "default": {
+          "$ref": "#/definitions/exposureRule"
+        }
+      },
+      "additionalProperties": false
+    },
     "flow": {
       "type": "object",
       "required": [
