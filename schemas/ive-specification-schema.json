@@ -346,6 +346,10 @@
         },
         "onFailure": {
           "$ref": "#/definitions/rootOnFailure"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Metadata tecnologica del flow, lo mismo que en un Intent. Es lo que le escribe un overlay con un target '$.flows.X.extensions.<tecnologia>' (ver el schema de overlay), y sin esto un flow expuesto por HTTP no puede declarar su path, su metodo ni su operationId: en un Intent eso se infiere de 'is', y un flow no tiene 'is'."
         }
       },
       "additionalProperties": false
