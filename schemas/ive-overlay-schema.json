@@ -223,9 +223,31 @@
         "skip": {
           "type": "array",
           "items": {
-            "type": "string"
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "artifact"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "artifact": {
+                    "type": "string",
+                    "description": "Artifact type name (a key under ive.config.json's 'artifacts')."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Why this View is not generated as that artifact. Travels into the facts file as the note of the exclusion, and is the only place this decision can be recorded: it is a business decision, not one that can be reconstructed from the code."
+                  }
+                }
+              }
+            ]
           },
-          "description": "Artifact type names (matching keys under ive.config.json's 'artifacts') to never generate for this View, regardless of 'as'."
+          "description": "Artifact type names to never generate for this View, regardless of 'as'. A plain string is the name; an object is the same plus the reason for the exclusion."
         },
         "domain": {
           "type": "string",

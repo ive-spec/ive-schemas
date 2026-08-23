@@ -277,9 +277,75 @@
         "exclude": {
           "type": "array",
           "items": {
-            "type": "string"
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Why it is excluded. Travels into the facts file as the note of the exclusion."
+                  }
+                }
+              }
+            ]
           },
-          "description": "Names (Intent/Flow/View) to skip for this artifact, even if present in the adapter."
+          "description": "Names (Intent/Flow/View) to skip for this artifact, even if present in the adapter. A plain string is the name; an object is the same plus the reason."
+        },
+        "excludePatterns": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "pattern"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "pattern": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Why it is excluded. Travels into the facts file as the note of the exclusion."
+                  }
+                }
+              }
+            ]
+          },
+          "description": "Simple `*` wildcard patterns; a View whose name matches is skipped for this artifact. A plain string is the pattern; an object is the same plus the reason."
+        },
+        "onlyOnce": {
+          "type": "boolean",
+          "description": "Never overwrite the artifact once it exists: it belongs to the project from then on."
+        },
+        "onChangeDetected": {
+          "type": "string",
+          "enum": [
+            "next",
+            "warn",
+            "silent"
+          ],
+          "description": "What to do when 'onlyOnce' protected a file and the generated version differs: write <file>.next, warn, or say nothing."
+        },
+        "renderLast": {
+          "type": "boolean",
+          "description": "Render this artifact after every other one. Required for artifacts rendered FROM the collected facts (README, TODO): rendered earlier they see a half-filled list."
         }
       }
     }
