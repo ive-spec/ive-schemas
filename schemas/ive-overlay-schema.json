@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/ive-spec/ive-schemas/main/schemas/overlay-schema.json",
   "title": "IVE Overlay Schema",
-  "description": "Single schema for any overlay, regardless of target technology. Technology/concept-specific rules (Java, trigger, ...) are expressed as conditional (if/then) blocks below, keyed off the TARGET PATH itself (not a nested content shape) — matching how overlays are actually written in this project: the target path navigates directly to the extension node, and the type-specific fields are the DIRECT properties of that same target entry.",
+  "description": "Single schema for any overlay, regardless of target technology. It validates the ENVELOPE only: that the file carries an `overlay` with a schemaVersion and a list of targets, and that every target names a JSONPath. WHAT EACH TARGET WRITES IS NOT VALIDATED HERE - that is the job of the `technology.yaml` descriptor of the namespace being written to, checked by the generator (validateOverlayValues) and drawn by the IDE from the same source. This schema used to carry if/then content rules for three namespaces (java, trigger, generation) as well, and they were removed on purpose: they covered an arbitrary 3 of the 9 namespaces that exist, they matched only ONE of the two valid ways to write a target (a target ending in the namespace, never a target whose content nests `extensions.<ns>`, which this project uses too), they had to be edited twice for every change - and they did drift, in both directions - and they ship on a different clock than the descriptors, which travel with the templates. One authority, covering every namespace and both target forms, beats two that disagree.",
   "type": "object",
   "required": [
     "overlay"
@@ -22,10 +22,10 @@
         },
         "targets": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "#/definitions/overlayTarget"
-          }
+          },
+          "description": "Can be empty. An overlay that overrides nothing yet is a legitimate state - it is exactly what the IDE writes when someone creates one - and `minItems: 1` made that freshly created file fail validation before it could be filled in."
         },
         "description": {
           "type": "string",
@@ -45,228 +45,10 @@
         "target": {
           "type": "string",
           "pattern": "^\\$\\.",
-          "description": "JSONPath-style target, e.g. '$.extensions.java' or '$.flows.X.extensions.trigger'."
+          "description": "JSONPath-style target, e.g. '$.extensions.java' or '$.flows.X.extensions.trigger'. It can also name the element alone ('$.intents.AddPet') and nest the namespaces under `extensions` in the entry's own content - both forms are valid and both are used."
         }
       },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "target": {
-                "pattern": "\\.extensions\\.java$"
-              }
-            },
-            "required": [
-              "target"
-            ]
-          },
-          "then": {
-            "$ref": "#/definitions/javaExtension"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "target": {
-                "pattern": "\\.extensions\\.trigger$"
-              }
-            },
-            "required": [
-              "target"
-            ]
-          },
-          "then": {
-            "$ref": "#/definitions/triggerExtension"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "target": {
-                "pattern": "\\.extensions\\.generation$"
-              }
-            },
-            "required": [
-              "target"
-            ]
-          },
-          "then": {
-            "$ref": "#/definitions/generationExtension"
-          }
-        }
-      ]
-    },
-    "javaExtension": {
-      "description": "`basePackage` is intentionally OPTIONAL here — it can also come from `vars.basePkgPath` in ive.config.json, resolved via the `javaPackageFromPath` helper inside adapter.hbs. Whether AT LEAST ONE of these two sources supplies it can't be expressed in this schema alone (that would require checking a separate file) — enforce it in application code instead.",
-      "properties": {
-        "basePackage": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)*$"
-        },
-        "packages": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "e.g. { intents: '...', flow: '...', api: '...' } — per-artifact-group Java package suffixes."
-        }
-      }
-    },
-    "triggerExtension": {
-      "description": "What invokes a Flow or Intent - deliberately an implementation detail, not part of the conceptual spec (an Intent/Flow's meaning never depends on who/what calls it - see the Intent definition itself). 'invocation' is the DEFAULT: an absent trigger overlay and an empty trigger object both mean it, and it is listed explicitly only for clarity - that is why 'type' is not required here. Each other type requires its own field, and those conditionals check that 'type' is PRESENT: without that check an empty object matches every branch vacuously and is rejected for lacking cron AND channel AND name AND expression at once.",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "invocation",
-            "schedule",
-            "event",
-            "signal",
-            "condition"
-          ],
-          "default": "invocation"
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "schedule"
-              }
-            },
-            "required": [
-              "type"
-            ]
-          },
-          "then": {
-            "required": [
-              "cron"
-            ],
-            "properties": {
-              "cron": {
-                "type": "string",
-                "description": "Cron expression, e.g. '0 0 1 * *'."
-              },
-              "timezone": {
-                "type": "string",
-                "description": "IANA timezone, e.g. 'America/Argentina/Buenos_Aires'. Defaults to the deploying system's own timezone if omitted."
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "event"
-              }
-            },
-            "required": [
-              "type"
-            ]
-          },
-          "then": {
-            "required": [
-              "channel"
-            ],
-            "properties": {
-              "channel": {
-                "type": "string",
-                "description": "The channel/topic this Flow reacts to."
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "signal"
-              }
-            },
-            "required": [
-              "type"
-            ]
-          },
-          "then": {
-            "required": [
-              "name"
-            ],
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "The broadcast signal name this Flow reacts to."
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "condition"
-              }
-            },
-            "required": [
-              "type"
-            ]
-          },
-          "then": {
-            "required": [
-              "expression"
-            ],
-            "properties": {
-              "expression": {
-                "type": "string",
-                "description": "A boolean expression, engine/language not prescribed by this schema — evaluated by whatever generation target implements this trigger type."
-              }
-            }
-          }
-        }
-      ]
-    },
-    "generationExtension": {
-      "description": "Per-View generation control. 'filterValue' picks which mutually-exclusive artifact variant this View represents (e.g. 'entity' vs 'record') — an artifact only applies to a View if the artifact's own config declares a matching 'filter' (either 'filter: true', comparing against the artifact's own key name, or 'filter: \"X\"' comparing against an explicit string). A View without 'filterValue' matches no filter-restricted artifact (no automatic guessing). 'skip' independently excludes specific artifacts for this View regardless of 'as'. 'domain' is used for the {domain} placeholder in fileNamePattern/outputDirectory — mainly meaningful for canonicalViews from the platform catalog, which are already organized by domain there. The contradiction rule (a View declaring 'filterValue: X' while also listing X in its own 'skip') is enforced at generation time (artifacts.ts throws), not by this schema — expressing 'a string property's value must not appear in a sibling array property' isn't practical in standard JSON Schema.",
-      "properties": {
-        "skip": {
-          "type": "array",
-          "items": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "object",
-                "required": [
-                  "artifact"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "artifact": {
-                    "type": "string",
-                    "description": "Artifact type name (a key under ive.config.json's 'artifacts')."
-                  },
-                  "reason": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Why this View is not generated as that artifact. Travels into the facts file as the note of the exclusion, and is the only place this decision can be recorded: it is a business decision, not one that can be reconstructed from the code."
-                  }
-                }
-              }
-            ]
-          },
-          "description": "Artifact type names to never generate for this View, regardless of 'as'. A plain string is the name; an object is the same plus the reason for the exclusion."
-        },
-        "domain": {
-          "type": "string",
-          "description": "Substituted into the {domain} placeholder in fileNamePattern/outputDirectory. Typically set as a default on the canonicalViews catalog entry itself (directly, no 'extensions' wrapper — catalog's own convention), overridable per-project via this overlay extension."
-        },
-        "filterValue": {
-          "type": "string",
-          "description": "Must match an artifact's effective filter value (its own key name if 'filter: true', or the explicit string if 'filter: \"X\"') to apply. No enum here — the set of valid values is defined by whatever artifacts a given generation configures, not by this schema."
-        }
-      }
+      "description": "`additionalProperties` stays open on purpose: what a target writes belongs to the namespace it addresses, and that is declared in that technology's `technology.yaml`, not here."
     }
   }
 }
