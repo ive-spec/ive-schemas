@@ -254,7 +254,8 @@
             "perIntent",
             "perFlow",
             "perView",
-            "perGroup"
+            "perGroup",
+            "perEntity"
           ]
         },
         "fileName": {
@@ -346,6 +347,21 @@
         "renderLast": {
           "type": "boolean",
           "description": "Render this artifact after every other one. Required for artifacts rendered FROM the collected facts (README, TODO): rendered earlier they see a half-filled list."
+        },
+        "filter": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "For scope 'perView': restrict this artifact to Views whose effective 'generation.filterValue' matches. `true` uses the artifact key itself as the value to compare (the common case, where artifact and category share a name); a string compares against that value instead. Absent, the artifact applies to every View not excluded."
+        },
+        "excludeFn": {
+          "type": "string",
+          "description": "For scope 'perView' / 'perEntity': name of an already-registered Handlebars helper deciding the exclusion, for logic neither a list nor a pattern can express. Called as helper(view|entity, name, options); returning true excludes it."
         }
       }
     }
