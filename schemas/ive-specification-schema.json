@@ -406,12 +406,26 @@
         },
         "compensate": {
           "type": "object",
-          "required": [
-            "intent"
+          "description": "Como se deshace el efecto de este step. Apunta a un Intent o -para una reversion que necesita varios pasos, manejar sus propios fallos o reintentar- a un Flow, con la misma forma que un step. Exactamente uno de los dos (ver 04-flows.md, decision 4).",
+          "oneOf": [
+            { "required": ["intent"] },
+            { "required": ["flow"] }
           ],
           "properties": {
             "intent": {
               "type": "object",
+              "required": [
+                "$ref"
+              ],
+              "properties": {
+                "$ref": {
+                  "type": "string"
+                }
+              }
+            },
+            "flow": {
+              "type": "object",
+              "description": "Compensacion compleja: se invoca como una unidad, igual que un flow anidado en un step. El flow-padre no orquesta lo que pase adentro.",
               "required": [
                 "$ref"
               ],
