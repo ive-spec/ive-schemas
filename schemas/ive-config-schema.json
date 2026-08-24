@@ -233,6 +233,29 @@
         },
         "resolveSpecRefs": {
           "type": "boolean"
+        },
+        "requiredVars": {
+          "type": "object",
+          "description": "Variables the project must declare for THIS generation to produce something correct. Checked before anything is written. It exists because the mechanism that detects missing vars only sees the CONFIGURATION: a var a template reads as `vars.<x>` is invisible to it, and when such a var is missing nothing fails - a folder comes out literally named `{theVar}`, or a .java with an empty package. Declared here and not in technology.yaml because descriptors load from templateRoots and the backend chain is a SUBSET of the SDK one: no repo tells them apart.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "javaPackage",
+                  "path",
+                  "text"
+                ],
+                "description": "What shape the value must have. Checked up front, so a malformed value is reported before half the generation is on disk. Without it, only emptiness is checked."
+              },
+              "description": {
+                "type": "string",
+                "description": "What the variable is and where to get its value. Shown to whoever has to fill it in."
+              }
+            }
+          }
         }
       }
     },
@@ -372,7 +395,9 @@
             {
               "type": "object",
               "additionalProperties": false,
-              "required": ["path"],
+              "required": [
+                "path"
+              ],
               "properties": {
                 "path": {
                   "type": "string",
@@ -387,7 +412,9 @@
             {
               "type": "object",
               "additionalProperties": false,
-              "required": ["helper"],
+              "required": [
+                "helper"
+              ],
               "properties": {
                 "helper": {
                   "type": "string",
