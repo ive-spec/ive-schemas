@@ -113,10 +113,7 @@
       }
     },
     "triggerExtension": {
-      "description": "What invokes a Flow or Intent — deliberately an implementation detail, not part of the conceptual spec (an Intent/Flow's meaning never depends on who/what calls it — see the Intent definition itself). 'invocation' is the default assumed when no trigger overlay is present at all; it's included here as an explicit option too, for clarity. 'http-webhook' is Intent-specific — a third party calls this Intent (unlike every other trigger type, where something internal to the system initiates the call) — see webhookName/path under that same Intent's extensions.openapi target.",
-      "required": [
-        "type"
-      ],
+      "description": "What invokes a Flow or Intent - deliberately an implementation detail, not part of the conceptual spec (an Intent/Flow's meaning never depends on who/what calls it - see the Intent definition itself). 'invocation' is the DEFAULT: an absent trigger overlay and an empty trigger object both mean it, and it is listed explicitly only for clarity - that is why 'type' is not required here. Each other type requires its own field, and those conditionals check that 'type' is PRESENT: without that check an empty object matches every branch vacuously and is rejected for lacking cron AND channel AND name AND expression at once.",
       "properties": {
         "type": {
           "type": "string",
@@ -125,9 +122,9 @@
             "schedule",
             "event",
             "signal",
-            "condition",
-            "http-webhook"
-          ]
+            "condition"
+          ],
+          "default": "invocation"
         }
       },
       "allOf": [
@@ -137,7 +134,10 @@
               "type": {
                 "const": "schedule"
               }
-            }
+            },
+            "required": [
+              "type"
+            ]
           },
           "then": {
             "required": [
@@ -161,7 +161,10 @@
               "type": {
                 "const": "event"
               }
-            }
+            },
+            "required": [
+              "type"
+            ]
           },
           "then": {
             "required": [
@@ -181,7 +184,10 @@
               "type": {
                 "const": "signal"
               }
-            }
+            },
+            "required": [
+              "type"
+            ]
           },
           "then": {
             "required": [
@@ -201,7 +207,10 @@
               "type": {
                 "const": "condition"
               }
-            }
+            },
+            "required": [
+              "type"
+            ]
           },
           "then": {
             "required": [

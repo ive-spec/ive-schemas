@@ -362,6 +362,41 @@
         "excludeFn": {
           "type": "string",
           "description": "For scope 'perView' / 'perEntity': name of an already-registered Handlebars helper deciding the exclusion, for logic neither a list nor a pattern can express. Called as helper(view|entity, name, options); returning true excludes it."
+        },
+        "nameFrom": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Dotted path resolved against the render root, e.g. 'intentName'."
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path"],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Dotted path resolved against the render root."
+                },
+                "pattern": {
+                  "type": "string",
+                  "description": "Regular expression applied to the resolved value; the first capture group is the name, or the whole match when there is none."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["helper"],
+              "properties": {
+                "helper": {
+                  "type": "string",
+                  "description": "Name of an already-registered Handlebars helper, called with the same signature as artifactName."
+                }
+              }
+            }
+          ],
+          "description": "Overrides where the artifact's name comes from, for the cases the default naming cannot express. Read by the shared 'artifactName' helper. Opt-in: without it, naming is unchanged."
         }
       }
     }
