@@ -1,19 +1,25 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "IVE Platform Catalog Schema",
-  "description": "Esquema para validar el catálogo centralizado de la plataforma (Requisitos, Perfiles, Views y Errores).",
+  "description": "Esquema de UN ARCHIVO de catálogo de plataforma. El catálogo se reparte en varios archivos que el generador fusiona (platformCatalog en la config de sistema), así que ninguna sección es obligatoria: cada archivo declara las que aporta.",
   "type": "object",
-  "required": ["standardViews", "requirements", "envelopeProfiles", "errors"],
   "properties": {
     "standardViews": {
       "type": "object",
       "description": "Diccionario de Views estándar corporativas.",
       "additionalProperties": {
         "type": "object",
-        "required": ["description", "schema"],
+        "required": [
+          "description",
+          "schema"
+        ],
         "properties": {
-          "description": { "type": "string" },
-          "schema": { "type": "object" }
+          "description": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       }
@@ -23,16 +29,35 @@
       "description": "Diccionario de requisitos atómicos conceptuales.",
       "additionalProperties": {
         "type": "object",
-        "required": ["description", "httpMapping"],
+        "required": [
+          "description",
+          "httpMapping"
+        ],
         "properties": {
-          "description": { "type": "string" },
+          "description": {
+            "type": "string"
+          },
           "httpMapping": {
             "type": "object",
             "properties": {
-              "requestHeaders": { "type": "array", "items": { "type": "string" } },
-              "responseHeaders": { "type": "array", "items": { "type": "string" } },
-              "failureCode": { "type": "integer" },
-              "failureView": { "type": "string" }
+              "requestHeaders": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "responseHeaders": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "failureCode": {
+                "type": "integer"
+              },
+              "failureView": {
+                "type": "string"
+              }
             },
             "additionalProperties": false
           }
@@ -45,12 +70,19 @@
       "description": "Diccionario de perfiles de envelope (combinaciones estándar de requisitos).",
       "additionalProperties": {
         "type": "object",
-        "required": ["description", "requirements"],
+        "required": [
+          "description",
+          "requirements"
+        ],
         "properties": {
-          "description": { "type": "string" },
+          "description": {
+            "type": "string"
+          },
           "requirements": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false
@@ -61,15 +93,120 @@
       "description": "Catálogo de códigos de error HTTP estandarizados.",
       "additionalProperties": {
         "type": "object",
-        "required": ["code", "description", "category"],
+        "required": [
+          "code",
+          "description",
+          "category"
+        ],
         "properties": {
-          "code": { "type": "integer" },
-          "description": { "type": "string" },
+          "code": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
           "category": {
             "type": "string",
-            "enum": ["success", "redirection", "clientError", "serverError"]
+            "enum": [
+              "success",
+              "redirection",
+              "clientError",
+              "serverError"
+            ]
           },
-          "view": { "type": "string" }
+          "view": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "namespace": {
+      "type": "string",
+      "description": "Ámbito bajo el que entra lo que declara este archivo. Lo usan las propiedades canónicas para que dos catálogos con claves cortas iguales no se pisen: se referencian calificadas ($ref: '#/canonicalProperties/standard/EmailAddress')."
+    },
+    "namespaceInfo": {
+      "type": "object",
+      "description": "Texto para personas sobre el ámbito."
+    },
+    "canonicalViews": {
+      "type": "object",
+      "description": "Views corporativas. Sinónimo histórico de standardViews."
+    },
+    "canonicalProperties": {
+      "type": "object",
+      "description": "Propiedades canónicas, por ámbito."
+    },
+    "suggestedErrorsByIntentKind": {
+      "type": "object",
+      "description": "Errores sugeridos según el tipo de Intent."
+    },
+    "transformOperations": {
+      "type": "object",
+      "description": "Operaciones de mapeo, AGRUPADAS POR TIPO DE DATO: una propiedad string ofrece las suyas y una fecha las suyas, sin mezclarse.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Las operaciones de un tipo de dato.",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "params": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inverse": {
+              "type": "string",
+              "description": "La operación que la deshace. La inversa de un mapeo se DERIVA de acá, no se declara en cada View."
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "trustLevels": {
+      "type": "object",
+      "description": "Quién invoca. Las claves son propias de cada organización: IVE no impone ninguna escala ni orden entre ellas. Es contra estas claves que resuelve exposure.byTrustLevel.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "dataClassifications": {
+      "type": "object",
+      "description": "QUE ES un dato, no cómo protegerlo. Una propiedad de una View declara una o más clases en `protection`; esta tabla dice qué implica cada una; cada tecnología decide cómo se cumple. NO se declaran medidas acá: nada de cifrado, exclusión de registros ni residencia. No existe una taxonomía universal — cada organización arma la suya.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "sensitivity": {
+            "type": "string",
+            "description": "Nivel de uso extendido, correspondiente al nivel de impacto de confidencialidad de NIST. Es el ÚNICO eje ordenado del catálogo, y por eso el único contra el que se puede escribir una regla del tipo 'de acá para arriba, protegido'.",
+            "enum": [
+              "public",
+              "internal",
+              "confidential",
+              "restricted"
+            ]
+          },
+          "compliance": {
+            "type": "array",
+            "description": "De dónde sale la obligación: una ley, una norma de industria, un contrato o una decisión propia. No se limita a lo regulatorio.",
+            "items": {
+              "type": "string"
+            }
+          }
         },
         "additionalProperties": false
       }

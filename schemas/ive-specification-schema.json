@@ -48,8 +48,11 @@
                 "mapping": {
                   "$ref": "#/definitions/transformChain"
                 },
-                "protectionExposure": {
-                  "$ref": "#/definitions/protectionExposure"
+                "exposure": {
+                  "$ref": "#/definitions/exposure"
+                },
+                "protection": {
+                  "$ref": "#/definitions/protection"
                 }
               }
             }
@@ -156,7 +159,7 @@
           },
           "trustLevel": {
             "type": "string",
-            "description": "Quién invoca, independiente de lo que exija el Envelope. Texto libre: es contra esta clave que resuelve protectionExposure.byTrustLevel de las Views. Sin trustLevel no se aplica ninguna protección por nivel de confianza."
+            "description": "Quién invoca, independiente de lo que exija el Envelope. Texto libre: es contra esta clave que resuelve exposure.byTrustLevel de las Views. Sin trustLevel no se recorta nada por nivel de confianza."
           }
         }
       }
@@ -260,6 +263,16 @@
         }
       }
     },
+    "protection": {
+      "type": "array",
+      "description": "Qué ES este dato: una o más clases del catálogo de plataforma (dataClassifications). La View declara qué es el dato, no cómo protegerlo: qué implica cada clase --su sensibilidad y de dónde sale la obligación-- lo dice el catálogo, y cómo se cumple lo decide cada tecnología. Es OTRO EJE que `exposure`, que dice qué ve cada quien.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
     "exposureRule": {
       "type": "object",
       "required": [
@@ -282,7 +295,7 @@
       },
       "additionalProperties": false
     },
-    "protectionExposure": {
+    "exposure": {
       "type": "object",
       "description": "Cómo tratar el valor de esta propiedad según quién la reciba.",
       "properties": {
