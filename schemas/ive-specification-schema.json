@@ -419,6 +419,11 @@
         "errorRef": {
           "type": "string"
         },
+        "errorCondition": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$",
+          "description": "Cual de las causas del error referenciado es este step. Es una CLAVE de `conditions` -- la del catalogo, o la que el flow declare en su entrada de `errors` --, y su mensaje es el texto con el que el error se lanza. Un error catalogado puede tener varias causas: un 404 por asiento no disponible y otro por vuelo cerrado son el MISMO 404, no dos errores; esto dice cual de las dos es este paso. Sin declarar, si el error tiene UNA sola causa se usa esa; con varias, la generacion avisa en vez de inventar un mensaje."
+        },
         "onFailure": {
           "type": "array",
           "items": {
