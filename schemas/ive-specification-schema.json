@@ -48,11 +48,8 @@
                 "mapping": {
                   "$ref": "#/definitions/transformChain"
                 },
-                "exposure": {
-                  "$ref": "#/definitions/exposure"
-                },
-                "protection": {
-                  "$ref": "#/definitions/protection"
+                "classification": {
+                  "$ref": "#/definitions/classification"
                 }
               }
             }
@@ -156,10 +153,6 @@
             "items": {
               "$ref": "#/definitions/errorRef"
             }
-          },
-          "trustLevel": {
-            "type": "string",
-            "description": "Quién invoca, independiente de lo que exija el Envelope. Texto libre: es contra esta clave que resuelve exposure.byTrustLevel de las Views. Sin trustLevel no se recorta nada por nivel de confianza."
           }
         }
       }
@@ -262,55 +255,6 @@
           ]
         }
       }
-    },
-    "protection": {
-      "type": "array",
-      "description": "Qué ES este dato: una o más clases del catálogo de plataforma (dataClassifications). La View declara qué es el dato, no cómo protegerlo: qué implica cada clase --su sensibilidad y de dónde sale la obligación-- lo dice el catálogo, y cómo se cumple lo decide cada tecnología. Es OTRO EJE que `exposure`, que dice qué ve cada quien.",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      },
-      "minItems": 1,
-      "uniqueItems": true
-    },
-    "exposureRule": {
-      "type": "object",
-      "required": [
-        "technique"
-      ],
-      "properties": {
-        "technique": {
-          "type": "string",
-          "enum": [
-            "none",
-            "mask",
-            "hidden"
-          ]
-        },
-        "showLast": {
-          "type": "integer",
-          "description": "Cuántos caracteres quedan a la vista. Solo tiene sentido con technique: mask.",
-          "minimum": 1
-        }
-      },
-      "additionalProperties": false
-    },
-    "exposure": {
-      "type": "object",
-      "description": "Cómo tratar el valor de esta propiedad según quién la reciba.",
-      "properties": {
-        "byTrustLevel": {
-          "type": "object",
-          "description": "Clave de nivel de confianza → técnica. Las claves son propias de cada organización; IVE no impone ninguna.",
-          "additionalProperties": {
-            "$ref": "#/definitions/exposureRule"
-          }
-        },
-        "default": {
-          "$ref": "#/definitions/exposureRule"
-        }
-      },
-      "additionalProperties": false
     },
     "flow": {
       "type": "object",
@@ -421,8 +365,16 @@
           "type": "object",
           "description": "Como se deshace el efecto de este step. Apunta a un Intent o -para una reversion que necesita varios pasos, manejar sus propios fallos o reintentar- a un Flow, con la misma forma que un step. Exactamente uno de los dos (ver 04-flows.md, decision 4).",
           "oneOf": [
-            { "required": ["intent"] },
-            { "required": ["flow"] }
+            {
+              "required": [
+                "intent"
+              ]
+            },
+            {
+              "required": [
+                "flow"
+              ]
+            }
           ],
           "properties": {
             "intent": {
@@ -627,6 +579,16 @@
         }
       },
       "additionalProperties": false
+    },
+    "classification": {
+      "type": "array",
+      "description": "Qué ES este dato: una o más clases del catálogo de plataforma (dataClassifications). La View declara qué es el dato, no cómo protegerlo ni qué ve cada quien: la técnica de exposición sale de una tabla de decisión que toma la sensibilidad, la clasificación y el nivel de confianza de quien invoca —que no se declara en ningún lado— y que se evalúa en runtime. No hay ninguna clave donde declarar esa técnica.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
     }
   }
 }

@@ -168,19 +168,6 @@
         }
       }
     },
-    "trustLevels": {
-      "type": "object",
-      "description": "Quién invoca. Las claves son propias de cada organización: IVE no impone ninguna escala ni orden entre ellas. Es contra estas claves que resuelve exposure.byTrustLevel.",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "description": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      }
-    },
     "dataClassifications": {
       "type": "object",
       "description": "QUE ES un dato, no cómo protegerlo. Una propiedad de una View declara una o más clases en `protection`; esta tabla dice qué implica cada una; cada tecnología decide cómo se cumple. NO se declaran medidas acá: nada de cifrado, exclusión de registros ni residencia. No existe una taxonomía universal — cada organización arma la suya.",
