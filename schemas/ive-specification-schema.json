@@ -424,6 +424,12 @@
           "pattern": "^[a-z][a-zA-Z0-9]*$",
           "description": "Cual de las causas del error referenciado es este step. Es una CLAVE de `conditions` -- la del catalogo, o la que el flow declare en su entrada de `errors` --, y su mensaje es el texto con el que el error se lanza. Un error catalogado puede tener varias causas: un 404 por asiento no disponible y otro por vuelo cerrado son el MISMO 404, no dos errores; esto dice cual de las dos es este paso. Sin declarar, si el error tiene UNA sola causa se usa esa; con varias, la generacion avisa en vez de inventar un mensaje."
         },
+        "wait": {
+          "$ref": "#/definitions/wait"
+        },
+        "timeout": {
+          "$ref": "#/definitions/timeout"
+        },
         "onFailure": {
           "type": "array",
           "items": {
@@ -437,8 +443,9 @@
             "intent"
           ],
           "not": {
-            "required": [
-              "flow"
+            "anyOf": [
+              { "required": ["flow"] },
+              { "required": ["wait"] }
             ]
           }
         },
@@ -447,12 +454,102 @@
             "flow"
           ],
           "not": {
-            "required": [
-              "intent"
+            "anyOf": [
+              { "required": ["intent"] },
+              { "required": ["wait"] }
+            ]
+          }
+        },
+        {
+          "required": [
+            "wait"
+          ],
+          "not": {
+            "anyOf": [
+              { "required": ["intent"] },
+              { "required": ["flow"] },
+              { "required": ["inputs"] },
+              { "required": ["outputs"] },
+              { "required": ["compensate"] }
             ]
           }
         }
       ],
+      "additionalProperties": false
+    },
+    "wait": {
+      "type": "object",
+      "description": "Esperar un plazo. Es el UNICO paso que no es un Intent: poner una pausa no es una intencion de negocio y no hay nada que implementar -- es una instruccion del proceso, como un goto (04-flows.md, decision 6). Un paso que espera ALGO --un mensaje, una senial, una condicion-- si es un Intent: que adentro aguarde es implementacion suya, y para el Flow es un paso que tarda en producir su salida. No produce salida, asi que nadie puede depender de el por datos: para que detenga algo hace falta `dependsOn` explicito. Y por lo mismo no lleva `inputs`, ni `outputs`, ni `compensate`: no recibe, no devuelve y no deja efecto que deshacer.",
+      "oneOf": [
+        {
+          "required": ["for"],
+          "not": { "required": ["until"] }
+        },
+        {
+          "required": ["until"],
+          "not": { "required": ["for"] }
+        }
+      ],
+      "properties": {
+        "for": {
+          "type": "string",
+          "description": "Cuanto esperar, como duracion ISO-8601 (`PT30M`, `P30D`) o como expresion que la resuelva contra el contexto (`{$steps.x.outputs.plazo}`), con la misma sintaxis que `inputs`."
+        },
+        "until": {
+          "type": "string",
+          "description": "Hasta cuando esperar, como instante ISO-8601 o --el caso que de verdad vale-- como expresion resuelta contra el contexto: `{$steps.solicitar.outputs.vencimiento}`. Un instante literal escrito en una especificacion casi siempre es un error, pero no se prohibe."
+        }
+      },
+      "additionalProperties": false
+    },
+    "timeout": {
+      "type": "object",
+      "description": "El limite de un paso que espera. OPCIONAL Y SIN VALOR POR OMISION, a proposito: un paso puede tardar meses y ser lo esperado --si aguarda una firma o una confirmacion externa--, y el problema no es que tarde sino que tarde cuando no deberia. Sin declararlo, el paso espera lo que haga falta; un timeout implicito cortaria procesos legitimos que nadie decidio cortar (04-flows.md, decision 6). No es solo del paso `wait`: vale para cualquier paso que espere, incluido un Intent que aguarda una firma. Al vencerse hay dos salidas, las dos con mecanismos que ya existen: `goto` a otro paso, o `terminatesAs: failure` con su `errorRef`.",
+      "required": [
+        "after"
+      ],
+      "oneOf": [
+        {
+          "required": ["action", "target"],
+          "not": { "required": ["terminatesAs"] }
+        },
+        {
+          "required": ["terminatesAs", "errorRef"],
+          "not": { "required": ["action"] }
+        }
+      ],
+      "properties": {
+        "after": {
+          "type": "string",
+          "description": "Cuanto se tolera la espera, como duracion ISO-8601 o como expresion. Misma forma que `wait.for`."
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "goto"
+          ],
+          "description": "Al vencerse, seguir por otro paso. Mismo mecanismo que el `goto` de un `onFailure`."
+        },
+        "target": {
+          "type": "string",
+          "description": "El stepId al que se va. Ese paso es destino de un salto, asi que --como cualquier otro-- tiene que declarar su `terminatesAs`."
+        },
+        "terminatesAs": {
+          "type": "string",
+          "enum": [
+            "failure"
+          ],
+          "description": "Al vencerse, el flow termina en fallo. Dispara el barrido de compensacion, igual que un step terminal. `success` no se admite: un vencimiento no es un final feliz, y si lo fuera el paso no tendria por que esperar."
+        },
+        "errorRef": {
+          "type": "string"
+        },
+        "errorCondition": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$",
+          "description": "Cual de las causas de ese error es el vencimiento. Mismo criterio que en un step terminal."
+        }
+      },
       "additionalProperties": false
     },
     "onFailureRule": {
