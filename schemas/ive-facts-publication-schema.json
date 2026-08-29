@@ -1,0 +1,802 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/ive-spec/ive-schemas/main/schemas/ive-facts-publication-schema.json",
+  "title": "IVE Facts Publication Envelope",
+  "description": "El sobre de publicacion de hechos (ive-facts.md, seccion 2.5). ES EL CONTRATO ENTRE DOS REPOSITORIOS: lo escribe el generador (`ive-tools`) y lo recibe el servidor de Facts, que vive aparte. Como no comparten una libreria, el formato se declara una sola vez ACA y los dos lados validan contra esta misma declaracion; si cada uno tuviera su copia del tipo, se separarian a la primera y el sintoma seria un sobre que se acepta y se guarda mal.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "publicationVersion",
+    "facts",
+    "context",
+    "integrity"
+  ],
+  "properties": {
+    "publicationVersion": {
+      "type": "string",
+      "description": "Version del SOBRE, no de los hechos. Un receptor que no la reconoce tiene que decirlo en vez de leerlo a la fuerza: lo que no entiende es la envoltura, y los hechos de adentro pueden estar perfectos."
+    },
+    "facts": {
+      "$ref": "#/definitions/factsDocument"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "who",
+        "branch",
+        "commit",
+        "environment",
+        "publishedAt"
+      ],
+      "description": "Lo que SOLO conoce quien publica. El CI es tonto: manda esto y nada calculado. Si el CI calculara algo, esa logica quedaria repartida en N pipelines con N versiones distintas.",
+      "properties": {
+        "origin": {
+          "enum": [
+            "ci",
+            "ide",
+            "manual"
+          ],
+          "description": "De donde salio la publicacion. Es lo que le permite a quien consulta saber cuanto peso darle: un hecho publicado por el CI de produccion no vale lo mismo que uno subido a mano desde una maquina. Catalogo CERRADO: un valor libre aca lo volveria inutil."
+        },
+        "who": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "verified"
+          ],
+          "description": "El quien, con sus dos grados. El grado viaja EXPLICITO y no se deduce de que haya un valor: un `who` informado guardado como verificado convierte un dato de conveniencia en una prueba falsa.",
+          "properties": {
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Puede ser null. Un pipeline que no pasa el autor del push deja el hueco a la vista, que es mejor que el usuario del sistema (`runner`, `root`), que no es nadie."
+            },
+            "verified": {
+              "type": "boolean",
+              "description": "true SOLO si una identidad configurada respaldo el valor (seccion 5). Sin identidad es un dato informado: sirve para saber a quien preguntarle, que es el uso cotidiano."
+            }
+          }
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Lo explicito le gana a git: un CI corre en detached HEAD y ahi la rama la sabe solo el pipeline."
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "El commit de la especificacion. Es lo que hace REDERIVABLE el conjunto; sin el, el digest prueba que nadie toco el archivo pero no contra que compararlo."
+        },
+        "environment": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "No es parte de la verificacion y su ausencia no degrada el sobre: hay equipos que trabajan para un tercero y no manejan ambientes propios."
+        },
+        "publishedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "worktreeDirty": {
+          "type": "boolean",
+          "description": "El arbol tenia cambios sin commitear al generar. Un sobre asi NO se puede rederivar aunque traiga commit: lo que se genero no es lo que ese commit contiene."
+        },
+        "staleInputs": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "count",
+            "newest",
+            "notChecked"
+          ],
+          "description": "Si lo que el proyecto declara como ENTRADA de la generacion (la especificacion, los overlays, las plantillas) quedo mas nuevo que los hechos que se estan publicando. Solo lo puede saber quien publica: es la fecha de archivos de SU maquina, y el servidor no tiene como calcularlo nunca. NULL Y CERO NO SON LO MISMO. `null` es que no se miro --un emisor viejo, o uno que no tiene los fuentes al lado-- y cero es que se miro y estaba al dia. Leer `null` como `0` convertiria 'no se' en 'esta bien', que es el unico error que este campo existe para evitar. NO TOCA `integrity.reproducible`: el sobre sigue trayendo con que rederivar, y rederivar es justamente lo que descubre la diferencia. Decir que no es rederivable seria decir que no se puede comprobar, que es lo contrario de lo que pasa.",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Cuantas entradas declaradas quedaron mas nuevas que los hechos. Cero significa que se miro y no habia ninguna."
+            },
+            "newest": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "file",
+                "at"
+              ],
+              "description": "La mas nueva de todas, que es la que alcanza para saber que hay que volver a generar. Las demas se cuentan en `count` y no se listan: un sobre no es el lugar para reproducir un `ls`.",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "description": "RELATIVA A LA RAIZ DEL PROYECTO. Una ruta absoluta contaria de que maquina salio y del arbol de directorios de quien publico, que no es asunto de la organizacion."
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            "notChecked": {
+              "type": "array",
+              "description": "Entradas que NO se pudieron mirar: un overlay traido por HTTP no tiene fecha en el disco de nadie, y una ruta con variables sin resolver tampoco. Se declaran porque sin esto un `count: 0` se leeria como 'todo al dia' cuando puede ser 'no mire la mitad'.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "file",
+                  "reason"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "digest",
+        "generator",
+        "reproducible",
+        "missing"
+      ],
+      "description": "Como se verifica esta publicacion sin confiar en quien la mando. LO QUE SOSTIENE LA VERACIDAD NO ES UNA FIRMA: una firma prueba QUIEN mando algo, y quien publica corre el generador en su propia maquina --si tiene la clave, tambien puede editar el archivo antes de firmarlo--. Lo que hace verificable a un hecho es poder volver a generarlo desde el commit y comparar.",
+      "properties": {
+        "algorithm": {
+          "const": "sha256"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Sobre la FORMA CANONICA del documento de hechos, no sobre su texto: reformatear el archivo no puede contar como manipularlo, o la verificacion da falsos positivos y deja de mirarse."
+        },
+        "generator": {
+          "type": "string",
+          "description": "Que version del generador produjo los hechos. Sin esto, rederivar desde el commit puede dar otra cosa por una razon legitima y no hay como distinguirlo de una manipulacion."
+        },
+        "reproducible": {
+          "type": "boolean",
+          "description": "Si el sobre trae lo necesario para volver a generar y comparar. `false` NO lo invalida: lo vuelve una afirmacion que hay que creer en vez de una que se puede comprobar, y quien consulta tiene derecho a saber cual de las dos esta mirando."
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Que le falta para serlo. Vacio cuando `reproducible` es true."
+        }
+      }
+    },
+    "signature": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "El lugar angosto de la firma: el UNICO caso en que no es teatro es que el que firma sea una parte que el que publica no puede suplantar --el CI con una clave que las maquinas de desarrollo no tienen--. Opcional, de cada organizacion, y nada de lo que sostiene la veracidad depende de el."
+    }
+  },
+  "definitions": {
+    "factsDocument": {
+      "type": "object",
+      "required": [
+        "factsVersion",
+        "generations"
+      ],
+      "description": "El contenido de `artifacts/facts/facts.json`. Lo escribe EL GENERADOR, nunca una plantilla: un artefacto del directorio de salida lo puede editar cualquiera antes de publicarlo.",
+      "properties": {
+        "factsVersion": {
+          "type": "string"
+        },
+        "specificationId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "projectName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "specVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signature": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "verification": {
+          "type": "object",
+          "description": "QUE SE COMPROBO (seccion 9). NO sale del colector: sale de correr la simulacion al publicar. Va DENTRO del documento de hechos para que lo cubra el digest -- una verificacion que se pueda editar sin romper el digest no verifica nada. Su ausencia significa que NO se verifico, que no es lo mismo que haberse verificado sin nada que comprobar. Solo el agregado, nunca la corrida: los datos de un escenario pueden ser sensibles.",
+          "required": [
+            "verifiedAt"
+          ],
+          "properties": {
+            "verifiedAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Cuando se corrio. Una verificacion vieja publicada como si fuera de ahora seria peor que ninguna."
+            },
+            "flows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "flow"
+                ],
+                "properties": {
+                  "flow": {
+                    "type": "string"
+                  },
+                  "branches": {
+                    "type": "integer"
+                  },
+                  "covered": {
+                    "type": "integer",
+                    "description": "Cuantas ramas toco algun escenario. La cobertura es un hecho de gobierno de primer orden."
+                  },
+                  "scenarios": {
+                    "type": "integer"
+                  },
+                  "passed": {
+                    "type": "integer"
+                  },
+                  "unexpected": {
+                    "type": "integer",
+                    "description": "Ramas alcanzadas que el calculo no habia previsto: una senal sobre el calculo, no sobre el equipo."
+                  },
+                  "unreadable": {
+                    "type": "integer",
+                    "description": "Escenarios que no se pudieron ni leer. Sin esto, un archivo roto se ve igual que un flow sin escenarios."
+                  }
+                }
+              }
+            },
+            "mappings": {
+              "type": "object",
+              "description": "La cobertura de mapeos es AUTOMATICA, asi que verificarlos tiene poco merito. Lo que vale es `withoutCases`: una View con mapeo y sin ningun caso es un hueco real.",
+              "properties": {
+                "views": {
+                  "type": "integer"
+                },
+                "cases": {
+                  "type": "integer"
+                },
+                "failed": {
+                  "type": "integer"
+                },
+                "withoutCases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "failures": {
+              "type": "array",
+              "description": "Los escenarios que no pasaron: el nombre del archivo y por que, NUNCA sus datos.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "flow": {
+                    "type": "string"
+                  },
+                  "scenario": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "uncovered": {
+              "type": "array",
+              "description": "Ramas sin ningun escenario. NO bloquean la publicacion, y por eso se registran: es el caso que el filtro no atrapa.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "flow": {
+                    "type": "string"
+                  },
+                  "branch": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "generations": {
+          "type": "object",
+          "description": "La unidad de colecta es LA GENERACION, no el proyecto: cada una afirma lo suyo y lo resuelve por su cuenta.",
+          "additionalProperties": {
+            "$ref": "#/definitions/generation"
+          }
+        }
+      }
+    },
+    "generation": {
+      "type": "object",
+      "required": [
+        "generatedAt",
+        "templateRoots",
+        "facts",
+        "residue"
+      ],
+      "properties": {
+        "technology": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Cuando corrio ESTA generacion, no cuando se publico. Cambia en cada corrida aunque no cambie ningun hecho, asi que para comparar dos corridas hay que mirar `facts`, no el archivo."
+        },
+        "templateRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "vocabularyVersions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "La version del vocabulario que declaro cada raiz de plantillas (seccion 2.5). Sin ella, el mismo `how` con dos significados en dos momentos es indistinguible."
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/fact"
+          }
+        },
+        "residue": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/what"
+          },
+          "description": "Lo sembrado que nadie afirmo (seccion 2.2). Es una afirmacion POSITIVA --'esto se pidio y nadie lo genero'--, no un silencio."
+        },
+        "structure": {
+          "type": "object",
+          "description": "LO QUE LA ESPECIFICACION RELACIONA (seccion 10.1) y no sale de ningun hecho: que View usa cada Intent y en que rol, la identidad de cada View, que ES cada dato, y de que lado del envelope esta cada requisito. No son hechos: son vinculos y atributos que la especificacion declara, y sin ellos cuatro tablas del modelo quedan vacias.",
+          "properties": {
+            "intentViews": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "intent",
+                  "view",
+                  "role"
+                ],
+                "properties": {
+                  "intent": {
+                    "type": "string"
+                  },
+                  "view": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "input | output | error"
+                  },
+                  "how": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Donde viaja (`body`, `query`), o el error del que es la View."
+                  }
+                }
+              }
+            },
+            "identities": {
+              "type": "object",
+              "description": "Por View, las propiedades que forman su clave natural de negocio.",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "classifications": {
+              "type": "object",
+              "description": "Por View y propiedad, QUE ES el dato en los terminos del equipo, con si la clase la declara el catalogo o la invento el proyecto. Las etiquetas derivadas viajan con cada hecho; esto es la clase de la que salieron.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "origin": {
+                        "enum": [
+                          "catalog",
+                          "local"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "envelopes": {
+              "type": "array",
+              "description": "Por Intent y LADO. El mismo requisito puede estar en los dos y no es el mismo hecho.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "intent",
+                  "side"
+                ],
+                "properties": {
+                  "intent": {
+                    "type": "string"
+                  },
+                  "side": {
+                    "type": "string",
+                    "description": "input | output"
+                  },
+                  "profile": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "El perfil del que salieron, o null si son requisitos sueltos."
+                  },
+                  "requirements": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "envelopeErrors": {
+              "type": "array",
+              "description": "Los errores que INYECTO un requisito, con cual lo trajo. Van aparte de los que declara el Intent: mezclarlos perderia el origen.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "intent",
+                  "name",
+                  "requirement"
+                ],
+                "properties": {
+                  "intent": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "requirement": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "errorConflicts": {
+              "type": "array",
+              "description": "Un error declarado con un identificador que el catalogo ya le da a OTRA cosa (10.2.1). Un caso aislado es un descuido; el mismo reusado en ocho proyectos es evidencia de que al catalogo le falta una entrada.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "intent",
+                  "error",
+                  "conflictsWith"
+                ],
+                "properties": {
+                  "intent": {
+                    "type": "string"
+                  },
+                  "error": {
+                    "type": "string"
+                  },
+                  "conflictsWith": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mappings": {
+          "type": "array",
+          "description": "LA TRAZABILIDAD DE DATOS (seccion 10.2): de que propiedad sale cada propiedad. Incluye las que NADIE declaro --lo que coincide en nombre se mapea solo-- porque sin ellas faltaria el caso mas frecuente, un campo protegido que se copia tal cual. NO son hechos: es lo que la especificacion declara.",
+          "items": {
+            "$ref": "#/definitions/mappingEdge"
+          }
+        },
+        "shapes": {
+          "type": "object",
+          "description": "LA FORMA DECLARADA de cada propiedad, por View y por propiedad (seccion 10.2). NO es un hecho: es lo que la especificacion promete, antes de que ninguna tecnologia toque nada. Va por generacion --y no una vez por proyecto-- porque una generacion encadenada puede ver una forma distinta de la que vio la que la produjo, y esa diferencia es justamente lo que hay que poder ver.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/propertyShape"
+            }
+          }
+        }
+      }
+    },
+    "mappingEnd": {
+      "type": "object",
+      "description": "Una punta de una arista. `local` cuando el valor no es una propiedad sino un intermedio con nombre de la propia View: es un punto del recorrido y no tiene fila, pero sin el una propiedad que sale de un local se veria como si saliera de la nada.",
+      "properties": {
+        "view": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "property": {
+          "type": "string"
+        },
+        "local": {
+          "type": "string"
+        }
+      }
+    },
+    "mappingStep": {
+      "type": "object",
+      "required": [
+        "operation"
+      ],
+      "properties": {
+        "operation": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Solo cuando la operacion es `custom`."
+        },
+        "from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "onNull": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "origin": {
+          "enum": [
+            "catalog",
+            "local"
+          ],
+          "description": "Si la operacion la declara el catalogo de plataforma o la invento el proyecto. `custom` nunca es del catalogo."
+        },
+        "parameters": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Lo que el paso declara ademas de su forma (`separator`, `values`, `otherwise`). El catalogo de operaciones es ABIERTO, asi que aca no se fija que parametros existen."
+        }
+      }
+    },
+    "mappingEdge": {
+      "type": "object",
+      "required": [
+        "target",
+        "sources",
+        "steps"
+      ],
+      "properties": {
+        "target": {
+          "$ref": "#/definitions/mappingEnd"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/mappingEnd"
+          },
+          "description": "Puede ser vacio: una cadena que no consume ninguna propiedad --un valor constante-- igual es un mapeo, y perderlo dejaria a la propiedad destino sin explicacion."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/mappingStep"
+          }
+        },
+        "kind": {
+          "enum": [
+            "declared",
+            "auto"
+          ],
+          "description": "`auto` es la que nadie declaro: coincide el nombre en las dos Views y se mapea sola."
+        }
+      }
+    },
+    "propertyShape": {
+      "type": "object",
+      "description": "Lo que afecta COMPATIBILIDAD. Una clave ausente significa que no se declaro: `null` y 'no declarado' no son lo mismo, y un minimo en null se leeria como que se quito un minimo que nunca existio.",
+      "properties": {
+        "required": {
+          "type": "boolean",
+          "description": "Resuelto desde el `required` de la View, que en JSON Schema es de la View y no de la propiedad. Se escribe tambien en false: dejar de ser requerida es un cambio de compatibilidad."
+        },
+        "type": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "minimum": {
+          "type": "string",
+          "description": "Numerico COMO TEXTO: el rango de un `numeric` no cruza igual entre motores, y aca solo se comparan valores entre dos publicaciones."
+        },
+        "maximum": {
+          "type": "string"
+        },
+        "minLength": {
+          "type": "integer"
+        },
+        "maxLength": {
+          "type": "integer"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "enum": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ref": {
+          "type": "string",
+          "description": "La View a la que apunta la propiedad, por NOMBRE cuando la referencia es interna (`#/views/CuentaView` -> `CuentaView`), cruda en cualquier otro caso. Cambiar a que apunta una propiedad rompe a quien consume igual que cambiarle el tipo."
+        },
+        "items": {
+          "type": "object",
+          "description": "De que es la lista. Se capturan las dos formas que existen de decirlo --un tipo o una View--; lo que el item declare ademas queda nombrado en `notCaptured` como `items.<clave>`.",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "ref": {
+              "type": "string"
+            }
+          }
+        },
+        "notCaptured": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Lo que esta propiedad declara, afecta compatibilidad y esta forma no tiene donde poner (`exclusiveMinimum`, `items`, `oneOf`...). Sin esto, una propiedad con `exclusiveMinimum` se veria igual que una sin ningun minimo y la comparacion entre dos publicaciones diria que no cambio nada cuando cambio."
+        }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "required": [
+        "how"
+      ],
+      "properties": {
+        "what": {
+          "$ref": "#/definitions/what"
+        },
+        "how": {
+          "type": "string",
+          "description": "De que forma se uso o materializo. Catalogo ABIERTO y declarado por cada tecnologia en su `facts.yaml`: lo desconocido entra MARCADO, no rechaza la publicacion. Un valor no reconocido que aparece publicado por varias tecnologias es una senal de que el vocabulario se esta quedando corto, no un error."
+        },
+        "state": {
+          "enum": [
+            "total",
+            "partial",
+            "delegated",
+            "excluded"
+          ],
+          "description": "Catalogo CERRADO. `delegated` NO es un diagnostico de ausencia: el generador no sabe si esta implementado. Es una atribucion de responsabilidad."
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Prosa, para leer."
+        },
+        "detail": {
+          "type": "object",
+          "description": "Lo mismo que `note` pero para PREGUNTARLE. Abierto a proposito: cada helper sabe que es relevante de lo suyo. Sin esto, 'que campos son PCI' es un grep y no una consulta."
+        },
+        "where": {
+          "type": "string",
+          "description": "El artefacto en que quedo, relativo a la raiz del proyecto."
+        },
+        "howKnown": {
+          "type": "boolean",
+          "description": "false cuando `how` cae fuera del catalogo declarado. AUSENTE cuando ninguna raiz declaro vocabulario: ahi nadie comparo contra nada, y decir `true` seria inventar."
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Etiquetas DERIVADAS (seccion 4). Las pone el colector desde la especificacion; un helper no las puede escribir. Son las UNICAS que gobiernan permisos: una etiqueta escrita a mano es un permiso que alguien evade olvidandose de ponerla. Jerarquicas (`compliance/PCI-DSS` responde a una consulta por `compliance`)."
+        }
+      }
+    },
+    "what": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "description": "Que elemento. `of` lo cuelga de su dueno: `idempotency` del Intent A y `idempotency` del Intent B son dos elementos distintos.",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "of": {
+          "$ref": "#/definitions/what"
+        },
+        "origin": {
+          "enum": [
+            "spec",
+            "catalog",
+            "dependency",
+            "generation"
+          ],
+          "description": "De donde salio el elemento. No es un detalle de implementacion: 'que Intents usan un perfil de la organizacion y cuales se escribieron uno propio' es una pregunta de gobierno."
+        }
+      }
+    }
+  }
+}
