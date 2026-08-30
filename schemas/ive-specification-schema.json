@@ -349,11 +349,18 @@
           }
         },
         "outputs": {
-          "type": "object",
-          "description": "Only for terminatesAs: success steps — symmetric to errorRef on terminatesAs: failure steps. Maps the flow's own output View fields to expressions ({$steps.X.outputs.Y} / {$view.input.Z}).",
-          "additionalProperties": {
-            "type": "string"
-          }
+          "description": "Only for terminatesAs: success steps - symmetric to errorRef on terminatesAs: failure steps. TWO FORMS, and which one applies is decided by the flow's view.output: if it is an object, a MAP of its fields to expressions ({$steps.X.outputs.Y} / {$view.input.Z}); if it is a LIST, a SINGLE expression naming the list ({$steps.X.outputs}), because a list has no fields to fill - it has elements.",
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
         },
         "dependsOn": {
           "type": "array",
