@@ -1,0 +1,213 @@
+# platform-requirements-and-envelopes.yaml
+# Atomic requirements + Envelope profiles. Stable, changes rarely.
+# `failureCondition` nombra la clave de `conditions` que corresponde a este
+# requisito dentro de la entrada de `failureCode` en platform-errors-and-views.yaml.
+# Es lo que permite que un codigo compartido (409 sirve para idempotencia y para
+# conflictos de dominio) se distinga por causa y no solo por numero.
+# `requestHeaders`/`responseHeaders` son la expresion de RESERVA del requisito: si
+# la tecnologia de destino tiene una construccion nativa para el mismo requisito
+# (en OpenAPI, `security`), el adapter la usa y omite el header.
+# `queryParams` es un MAPA nombre -> definicion, no una lista como
+# `requestHeaders`: un header siempre es texto, pero un parametro de query
+# tiene tipo, default y rango (page es entero y arranca en 1, order es un
+# enum). Por eso las dos formas conviven en vez de unificarse.
+# `appliesTo` declara en que lados del Envelope tiene sentido declarar el
+# requisito: [input], [output] o los dos. Es un hecho conceptual, no una
+# consecuencia del mapeo HTTP - por eso se declara y no se deduce de la
+# presencia de requestHeaders/responseHeaders, que es cierta hoy pero
+# clasificaria mal un requisito futuro que aplique a la salida sin usar
+# headers. Declarar `authentication` en la salida no produce nada en
+# ninguna tecnologia; declarar `traceability` en la entrada ya implica
+# que el Trace-Id vuelve, asi que no hace falta repetirlo en la salida.
+# Si `appliesTo` no esta, el tooling no opina: la ausencia significa
+# "no se", no "aplica a todo".
+# `enumFrom` marca un parametro cuyos valores validos NO son un dato fijo
+# del catalogo sino que se derivan de la View de salida del Intent:
+#   outputViewProperties        -> todas sus propiedades
+#   outputViewScalarProperties  -> solo las escalares (ordenar por un
+#                                  objeto no significa nada; seleccionarlo si)
+# Si la salida es una coleccion, se desanida por items.$ref.
+requirements:
+  authentication:
+    description: Verifies the caller's identity.
+    appliesTo: [input]
+    httpMapping:
+      requestHeaders:
+      - Authorization
+      failureCode: 401
+      failureCondition: missingOrInvalidCredentials
+      failureView: '#/canonicalViews/StandardErrorView'
+    graphqlMapping:
+      directives:
+      - auth
+      - requiresAuth
+      - isAuthenticated
+  authorization:
+    description: Verifies permissions over the resource or the Intent.
+    appliesTo: [input]
+    httpMapping:
+      failureCode: 403
+      failureCondition: insufficientPermissions
+      failureView: '#/canonicalViews/StandardErrorView'
+    graphqlMapping:
+      directives:
+      - requiresRole
+      - hasRole
+      - authorized
+  idempotency:
+    description: Guarantees single processing across retries.
+    appliesTo: [input]
+    httpMapping:
+      requestHeaders:
+      - Idempotency-Key
+      failureCode: 409
+      failureCondition: idempotencyKeyReused
+      failureView: '#/canonicalViews/StandardErrorView'
+    graphqlMapping:
+      directives:
+      - idempotent
+      - idempotencyKey
+  traceability:
+    description: Enables trace correlation across distributed systems.
+    appliesTo: [input, output]
+    httpMapping:
+      requestHeaders:
+      - Trace-Id
+      responseHeaders:
+      - Trace-Id
+  rateLimit:
+    description: Applies per-client call quota limits.
+    appliesTo: [input, output]
+    httpMapping:
+      responseHeaders:
+      - X-RateLimit-Limit
+      - X-RateLimit-Remaining
+      failureCode: 429
+      failureCondition: rateLimitExceeded
+      failureView: '#/canonicalViews/StandardErrorView'
+    graphqlMapping:
+      directives:
+      - rateLimit
+      - throttle
+  geoFencing:
+    description: Validates that the caller's geographic jurisdiction is allowed.
+    appliesTo: [input]
+    httpMapping:
+      requestHeaders:
+      - X-Forwarded-For
+      failureCode: 451
+      failureCondition: legallyRestricted
+      failureView: '#/canonicalViews/StandardErrorView'
+  pagination:
+    description: Splits a collection response into pages. Applies to Query Intents that return a collection.
+    appliesTo: [input]
+    httpMapping:
+      queryParams:
+        page:
+          type: integer
+          default: 1
+          minimum: 1
+        size:
+          type: integer
+          default: 20
+          minimum: 1
+          maximum: 100
+      responseHeaders:
+      - X-Total-Count
+    graphqlMapping:
+      directives:
+      - paginate
+      - connection
+  sorting:
+    description: Orders a collection response. Which fields are sortable depends on the output View, so the
+      catalog declares the shape of the parameters but not their allowed values.
+    appliesTo: [input]
+    httpMapping:
+      queryParams:
+        sort:
+          type: string
+          enumFrom: outputViewScalarProperties
+        order:
+          type: string
+          enum:
+          - asc
+          - desc
+          default: asc
+  localization:
+    description: Selects the language and regional formatting of the response content.
+    appliesTo: [input, output]
+    httpMapping:
+      requestHeaders:
+      - Accept-Language
+      responseHeaders:
+      - Content-Language
+  fieldSelection:
+    description: 'Lets the caller choose which properties of the output View come back. The View stays the
+      contract: with no filter it describes the response, with a filter it describes the maximum possible.
+      `required` governs reception, not exposure.'
+    appliesTo: [input]
+    httpMapping:
+      queryParams:
+        fields:
+          type: string
+          enumFrom: outputViewProperties
+          
+envelopeProfiles:
+
+  AuthIdemTrace:
+    requirements:
+      - authentication
+      - idempotency
+      - traceability
+      
+  StandardChangeContext:
+    description: Standard corporate context for Change-type Intents (Create, Update, Replace, Delete).
+    requirements:
+    - authentication
+    - authorization
+    - idempotency
+    - traceability
+  ReadOnlyContext:
+    description: Standard context for Query-type Intents (read-only).
+    requirements:
+    - authentication
+    - traceability
+  PublicContext:
+    description: Context for public interactions without authentication (e.g. login, public webhooks).
+    requirements: []
+  AsyncEventContext:
+    description: Context for asynchronous events (e.g. Kafka). Doesn't apply to HTTP, but defines the conceptual
+      requirements the messaging adapter must resolve.
+    requirements:
+    - traceability
+    - idempotency
+  InternalServiceContext:
+    description: Context for communication between internal services of the same platform.
+    requirements:
+    - traceability
+  HighSecurityContext:
+    description: Context for critical operations requiring strong authentication, strict authorization, and
+      full auditing.
+    requirements:
+    - authentication
+    - authorization
+    - idempotency
+    - traceability
+    - geoFencing
+  PaginatedReadContext:
+    description: 'Context for Query-type Intents that return a COLLECTION. Separate from ReadOnlyContext on
+      purpose: a Query over a single resource must not inherit pagination or sorting.'
+    requirements:
+    - authentication
+    - traceability
+    - pagination
+    - sorting
+  ShapedReadContext:
+    description: Context for Query-type Intents over a collection whose response can be shaped by the caller.
+      Adds fieldSelection on top of PaginatedReadContext.
+    requirements:
+    - authentication
+    - traceability
+    - pagination
+    - sorting
+    - fieldSelection
