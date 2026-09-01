@@ -80,9 +80,6 @@
       "description": "Catálogo de errores de dominio",
       "additionalProperties": {
         "type": "object",
-        "required": [
-          "conditions"
-        ],
         "properties": {
           "conditions": {
             "$ref": "#/definitions/conditions"
@@ -98,6 +95,12 @@
               }
             },
             "additionalProperties": false
+          },
+          "description": {
+            "type": "string"
+          },
+          "delegable": {
+            "type": "boolean"
           }
         }
       }
@@ -129,10 +132,10 @@
             "type": "object",
             "properties": {
               "input": {
-                "type": "object"
+                "$ref": "#/definitions/viewSide"
               },
               "output": {
-                "type": "object"
+                "$ref": "#/definitions/viewSide"
               }
             }
           },
@@ -270,10 +273,10 @@
           "type": "object",
           "properties": {
             "input": {
-              "type": "object"
+              "$ref": "#/definitions/viewSide"
             },
             "output": {
-              "type": "object"
+              "$ref": "#/definitions/viewSide"
             }
           }
         },
@@ -451,8 +454,16 @@
           ],
           "not": {
             "anyOf": [
-              { "required": ["flow"] },
-              { "required": ["wait"] }
+              {
+                "required": [
+                  "flow"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
             ]
           }
         },
@@ -462,8 +473,16 @@
           ],
           "not": {
             "anyOf": [
-              { "required": ["intent"] },
-              { "required": ["wait"] }
+              {
+                "required": [
+                  "intent"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
             ]
           }
         },
@@ -473,11 +492,31 @@
           ],
           "not": {
             "anyOf": [
-              { "required": ["intent"] },
-              { "required": ["flow"] },
-              { "required": ["inputs"] },
-              { "required": ["outputs"] },
-              { "required": ["compensate"] }
+              {
+                "required": [
+                  "intent"
+                ]
+              },
+              {
+                "required": [
+                  "flow"
+                ]
+              },
+              {
+                "required": [
+                  "inputs"
+                ]
+              },
+              {
+                "required": [
+                  "outputs"
+                ]
+              },
+              {
+                "required": [
+                  "compensate"
+                ]
+              }
             ]
           }
         }
@@ -489,12 +528,24 @@
       "description": "Esperar un plazo. Es el UNICO paso que no es un Intent: poner una pausa no es una intencion de negocio y no hay nada que implementar -- es una instruccion del proceso, como un goto (04-flows.md, decision 6). Un paso que espera ALGO --un mensaje, una senial, una condicion-- si es un Intent: que adentro aguarde es implementacion suya, y para el Flow es un paso que tarda en producir su salida. No produce salida, asi que nadie puede depender de el por datos: para que detenga algo hace falta `dependsOn` explicito. Y por lo mismo no lleva `inputs`, ni `outputs`, ni `compensate`: no recibe, no devuelve y no deja efecto que deshacer.",
       "oneOf": [
         {
-          "required": ["for"],
-          "not": { "required": ["until"] }
+          "required": [
+            "for"
+          ],
+          "not": {
+            "required": [
+              "until"
+            ]
+          }
         },
         {
-          "required": ["until"],
-          "not": { "required": ["for"] }
+          "required": [
+            "until"
+          ],
+          "not": {
+            "required": [
+              "for"
+            ]
+          }
         }
       ],
       "properties": {
@@ -517,12 +568,26 @@
       ],
       "oneOf": [
         {
-          "required": ["action", "target"],
-          "not": { "required": ["terminatesAs"] }
+          "required": [
+            "action",
+            "target"
+          ],
+          "not": {
+            "required": [
+              "terminatesAs"
+            ]
+          }
         },
         {
-          "required": ["terminatesAs", "errorRef"],
-          "not": { "required": ["action"] }
+          "required": [
+            "terminatesAs",
+            "errorRef"
+          ],
+          "not": {
+            "required": [
+              "action"
+            ]
+          }
         }
       ],
       "properties": {
@@ -663,14 +728,22 @@
     },
     "conditions": {
       "type": "object",
-      "description": "Causas por las que puede darse este error. La CLAVE es un identificador estable, la que usa el codigo generado para referirse a una causa puntual (enum, constante); el MENSAJE es el texto con el que el error se lanza en runtime, y puede reescribirse (redaccion, traduccion) sin romper nada que lo referencie. Misma forma en el catalogo y en el Intent: si un Intent declara una condicion cuya clave YA existe en la entrada del catalogo, es el mismo error y no se agrega nada; si la clave es nueva, es una causa propia de la logica del Intent y convive con la del catalogo bajo el mismo codigo HTTP.",
+      "description": "Los motivos por los que se produce este error, por clave. Un mismo codigo se produce por motivos distintos y cada uno implica una accion distinta: por eso cada uno es una condicion con clave propia.",
       "minProperties": 1,
       "propertyNames": {
         "pattern": "^[a-z][a-zA-Z0-9]*$"
       },
       "additionalProperties": {
-        "type": "string",
-        "minLength": 1
+        "description": "DOS FORMAS, y las dos se aceptan. La de ahora es un objeto con `message` y `expects`: un motivo implica una ACCION distinta de quien lo recibe, y `expects` es lo que la nombra -- es lo que justifica que la condicion exista y con lo que se decide si aplica. La vieja es el texto suelto, y sigue valiendo para que una spec ya escrita no deje de generar; lo que le falta --el `expects`-- se avisa, porque no se puede inventar: es del negocio de ese Intent.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "$ref": "#/definitions/condition"
+          }
+        ]
       }
     },
     "errorRef": {
@@ -698,6 +771,100 @@
       },
       "minItems": 1,
       "uniqueItems": true
+    },
+    "viewSide": {
+      "type": "object",
+      "description": "QUE VIEW VIAJA DE ESTE LADO, Y SI ES UNA O SON MUCHAS. La View responde QUE datos; la cardinalidad responde CUANTOS, y por eso el array va en el USO y no adentro de la View --envolverla en otra View con una sola propiedad de tipo arreglo mete en el contrato algo que no es del contrato--. Tres formas, y valen las tres: `{$ref}` (una, `object` implicito), `{type: object, $ref}` (una, explicito) y `{type: array, items: {$ref}}` (muchas). Se admite `schema.$ref` en lugar de `$ref` porque ya venia admitiendose. ALCANCE: colecciones de Views, no de tipos sueltos -- sin View no hay donde declarar `classification`, `mapping` ni `identity`.",
+      "oneOf": [
+        {
+          "required": [
+            "type",
+            "items"
+          ],
+          "properties": {
+            "type": {
+              "const": "array"
+            },
+            "items": {
+              "type": "object",
+              "oneOf": [
+                {
+                  "required": [
+                    "$ref"
+                  ]
+                },
+                {
+                  "required": [
+                    "schema"
+                  ]
+                }
+              ],
+              "properties": {
+                "$ref": {
+                  "type": "string"
+                },
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "$ref"
+                  ],
+                  "properties": {
+                    "$ref": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "object"
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "$ref"
+              ]
+            },
+            {
+              "required": [
+                "schema"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "condition": {
+      "type": "object",
+      "description": "UN MOTIVO por el que se produce este error, y que implica una accion distinta de quien lo recibe. La CLAVE es el identificador estable que usa el codigo generado. Una condicion del CATALOGO es canonica: su texto no se reescribe -- quien necesite decir otra cosa declara una propia, con clave nueva.",
+      "required": [
+        "message",
+        "expects"
+      ],
+      "properties": {
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "description": "El texto con el que el error se lanza."
+        },
+        "expects": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Que tiene que hacer quien lo recibe para resolverlo. Obligatorio tambien en una condicion propia, y a proposito: quien integra conoce las estandar, y las de este negocio las conoce solo por lo que el contrato diga. Ademas aplica el criterio al declararla -- si nadie puede decir que hacer, esa condicion se puede unir a otra."
+        },
+        "delegable": {
+          "type": "boolean"
+        },
+        "communicates": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }
