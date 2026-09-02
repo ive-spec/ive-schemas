@@ -31,6 +31,13 @@
       },
       "description": "Map of generation name -> its configuration. Can be empty right after 'ive init'."
     },
+    "verifications": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/generationConfig"
+      },
+      "description": "LAS GENERACIONES DE PRUEBAS, que parten de los escenarios de flow y de los casos de mapeo que produjo la simulacion, no de la especificacion. MISMA FORMA QUE `generations` Y OTRA CLAVE, a proposito: si vivieran ahi, alguien las agrega a `activeGenerations` y a partir de entonces se corren en cada vuelta, tocando archivos que llevan lo que una persona escribio. No entran por `activeGenerations`: se corren con `ive verify generate`. Ver `ive-docs/generacion-desde-escenarios.md`."
+    },
     "dependencies": {
       "type": "object",
       "additionalProperties": {
@@ -40,13 +47,17 @@
           "adapterSource"
         ],
         "properties": {
+          "specification": {
+            "type": "string",
+            "description": "QUIEN es el proveedor: el `specification.id` de su spec. Es la identidad ESTABLE de la dependencia -- `adapterSource` dice donde esta el archivo HOY, en esta maquina, y eso cambia con cada checkout. Sin esto, si el archivo no esta no se sabe ni de que servicio se trata; y si apunta al archivo equivocado nadie lo nota, porque los dos son adapters validos. Declarado, se compara contra el `specificationId` que el propio adapter trae: si no coinciden, se esta generando contra el contrato de otro servicio. Es el mismo id con el que Facts cruza el grafo de consumo (`provider_specification_id`)."
+          },
           "adapterSource": {
             "type": "string",
-            "description": "Path or URL to an adapter-sdk.json this dependency resolves to."
+            "description": "Path or URL to an adapter-sdk.json this dependency resolves to. DONDE esta ahora; quien es lo dice `specification`."
           },
           "project": {
             "type": "string",
-            "description": "Name of the linked project (see 'projects') this dependency corresponds to, if any. Display-only metadata for tooling — never resolved or read by the generator itself; 'adapterSource' remains the actual path/URL used."
+            "description": "El proyecto vinculado (ver 'projects') del que sale esta dependencia. Vincular y depender son dos momentos de la MISMA relacion: vincular apunta a la especificacion --lo que hace falta para ESCRIBIR el flow-- y depender al adapter ya generado --lo que hace falta para MATERIALIZAR la llamada--. Este campo es el que las une, y por eso el origen remoto se declara una sola vez, en 'projects', y no por dependencia."
           }
         }
       },
@@ -64,7 +75,26 @@
         "properties": {
           "path": {
             "type": "string",
-            "description": "Directory of the linked project, relative to this config file."
+            "description": "Directory of the linked project, relative to this config file. Relativa a proposito: un proyecto se clona en cualquier lado y la ruta absoluta de una maquina no vale en la otra."
+          },
+          "from": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "DE DONDE se obtiene este proyecto cuando no esta al lado -- en una organizacion viven en repositorios distintos, y una ruta relativa solo sirve si alguien ya los puso uno junto al otro. EL GENERADOR NO LO RESUELVE NI BAJA NADA: salir a la red a mitad de una generacion haria que el resultado dependa del momento. Es para quien prepara el entorno, y para que el error diga que falta y de donde sacarlo, en vez de un ENOENT con una ruta.",
+            "properties": {
+              "repository": {
+                "type": "string",
+                "description": "URL del repositorio donde vive el proyecto."
+              },
+              "ref": {
+                "type": "string",
+                "description": "Tag, rama o commit. Sin esto, 'el repositorio' no identifica una version: manana dice otra cosa."
+              },
+              "path": {
+                "type": "string",
+                "description": "Subcarpeta dentro del repositorio, cuando no esta en la raiz."
+              }
+            }
           },
           "spec": {
             "type": "string",
@@ -254,6 +284,41 @@
                 "type": "string",
                 "description": "What the variable is and where to get its value. Shown to whoever has to fill it in."
               }
+            }
+          }
+        },
+        "runs": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "DE QUE CORRIDAS PARTE. Solo en una generacion de `verifications`. Su presencia es lo que hace que el nucleo ejecute los escenarios y los casos --con las mismas funciones que `ive flow test` y `ive mapping test`-- y deje el RESULTADO en `runs`, dentro del adapter: los dobles salen de lo que el escenario declara y las aserciones de la traza. Una plantilla no vuelve a leer un escenario.",
+          "properties": {
+            "flows": {
+              "oneOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "const": "*"
+                }
+              ],
+              "description": "Los flows de los que tomar escenarios. Sin declararlo entran todos. Se acota por NOMBRE y no por archivo: un escenario nuevo de un flow ya declarado tiene que entrar solo."
+            },
+            "views": {
+              "oneOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "const": "*"
+                }
+              ],
+              "description": "Las Views con mapeo de las que tomar casos. Sin declararlo entran todas."
             }
           }
         }

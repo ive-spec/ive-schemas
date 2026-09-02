@@ -30,39 +30,62 @@
       "additionalProperties": {
         "type": "object",
         "required": [
-          "description",
-          "httpMapping"
+          "description"
         ],
         "properties": {
           "description": {
             "type": "string"
           },
-          "httpMapping": {
+          "appliesTo": {
+            "type": "array",
+            "description": "A que tipos de Intent (`is`) le corresponde este requisito. Sin esto, a todos.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failure": {
             "type": "object",
+            "description": "CON QUE ERROR DEL CATALOGO FALLA ESTE REQUISITO, y cuales de sus causas. Es del modelo, no de una tecnologia: nombra una entrada de `errors` y claves de sus `conditions`. Antes vivia adentro de `httpMapping` como `failureCode` + `failureCondition`, donde parecia una expresion de HTTP; ademas nombraba un numero, y la entrada dice mas -- un mismo codigo sirve a causas distintas (el 409 cubre la idempotencia y el conflicto de dominio), asi que el numero solo no alcanza para saber de cual se habla. EL SCHEMA SE QUEDO EN LA FORMA VIEJA cuando el catalogo y el generador pasaron a `conditions` en plural: exigia `condition` y rechazaba `conditions`, asi que CADA requisito daba dos avisos en CADA corrida. Un aviso que sale siempre y que nadie puede arreglar es peor que ninguno: se deja de leer, y con el los que si importan.",
+            "required": [
+              "errorRef"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "conditions"
+                ]
+              },
+              {
+                "required": [
+                  "condition"
+                ]
+              }
+            ],
             "properties": {
-              "requestHeaders": {
+              "errorRef": {
+                "type": "string",
+                "description": "`#/errors/<entrada>` del catalogo."
+              },
+              "conditions": {
                 "type": "array",
+                "minItems": 1,
                 "items": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "pattern": "^[a-z][a-zA-Z0-9]*$"
+                },
+                "description": "VARIAS CAUSAS, NO UNA. Un requisito falla por motivos distintos --sin credencial, invalida, vencida-- y cada uno pide una ACCION distinta de quien lo recibe: nombrar una sola dejaba a las otras fuera del contrato. Cada entrada es una clave de las `conditions` de ese error."
               },
-              "responseHeaders": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "failureCode": {
-                "type": "integer"
-              },
-              "failureView": {
-                "type": "string"
+              "condition": {
+                "type": "string",
+                "pattern": "^[a-z][a-zA-Z0-9]*$",
+                "description": "LA FORMA VIEJA, en singular. El generador la sigue leyendo para no romper un catalogo que todavia no se migro, y por eso el schema la acepta -- pero lo del modelo es `conditions`."
               }
             },
             "additionalProperties": false
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "CERRADO A PROPOSITO. Un requisito dice QUE hace falta; COMO se expresa es de cada tecnologia y lo declara SU `technology.yaml`, en su bloque `catalog.requirements` --los headers y los query params de HTTP en el paquete de OpenAPI, los headers de mensaje en el de AsyncAPI--. Un `httpMapping` aca adentro obligaba a este archivo a saber de HTTP, y le habria hecho crecer un mapeo mas por cada tecnologia. Si aparece una clave que este schema no declara, es un residuo de esa mudanza o un error de tipeo."
       }
     },
     "envelopeProfiles": {
@@ -95,7 +118,6 @@
         "type": "object",
         "required": [
           "code",
-          "description",
           "category"
         ],
         "properties": {
@@ -115,10 +137,44 @@
             ]
           },
           "view": {
-            "type": "string"
+            "description": "La View con la que viaja el cuerpo de este error. DOS FORMAS, las dos vivas: `{ $ref: '#/canonicalViews/X' }` --la de los archivos `platform-*.yaml`-- y el string `'#/standardViews/X'` --la de `ive-platform-catalog.yaml`, que sigue cargandose--. La primera es la forma buena; la segunda se acepta para no invalidar lo que ya anda.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "$ref"
+                ],
+                "properties": {
+                  "$ref": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "conditions": {
+            "$ref": "#/definitions/conditions"
+          },
+          "delegable": {
+            "type": "boolean",
+            "description": "Si un mediador puede resolver este error. Va al ERROR --y no a una condicion-- cuando el error no declara condiciones catalogadas, que es el caso del 400 y del 422."
+          },
+          "relieves": {
+            "type": "boolean",
+            "description": "Si que un mediador la asuma RELEVA a quien esta detras de hacerla. `delegable` dice que un mediador PUEDE tomarla; esto dice que pasa cuando la toma. Con true la generacion deja de emitir esa validacion --es la regla--. Con false la sigue emitiendo y lo delegado es la COMPLEJIDAD, no el control: el 401 no se puede delegar entero porque el servicio sigue verificando la credencial que le llega, `resourceNotPermitted` depende del dato y el dato lo tiene el servicio, y una precondicion tiene que evaluarse atomicamente con la escritura. OBLIGATORIO cuando `delegable` es true: sin esto, no haberlo mirado se guarda como \"releva\" y la generacion deja de emitir una validacion porque nadie contesto la pregunta."
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": { "properties": { "delegable": { "const": true } }, "required": ["delegable"] },
+            "then": { "required": ["relieves"] }
+          }
+        ],
+        "description": "CERRADO A PROPOSITO. El catalogo describe ERRORES, no tecnologias: un `soapMapping` o un `graphqlMapping` aca adentro obligaban al catalogo a saber de SOAP y de GraphQL, y le habrian hecho crecer un `xxxMapping` mas por cada tecnologia. Esas tablas se mudaron al bloque `catalog` del `technology.yaml` de cada paquete de plantillas, que es de donde son. Si aparece una clave que este schema no declara, es un residuo de esa mudanza o un error de tipeo -- las dos cosas hay que verlas."
       }
     },
     "namespace": {
@@ -197,7 +253,85 @@
         },
         "additionalProperties": false
       }
+    },
+    "successByIntentKind": {
+      "type": "object",
+      "description": "Con que termina un Intent de cada tipo (`is`) cuando anda: el NOMBRE de la entrada de este catalogo, de donde salen el codigo y su descripcion. Es la UNICA copia de esa tabla -- la usan el motor, para registrar el estado de un paso, y las cadenas que generan flows.",
+      "propertyNames": {
+        "pattern": "^[A-Z][a-zA-Z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "views": {
+      "type": "object",
+      "description": "Views que usan los errores de este catalogo para su cuerpo. Solo las declaran los errores que reciben datos y los rechazan --el 400 y el 422--, que son los que necesitan decir QUE CAMPO fallo; el resto se explica con la clave de su condicion y su mensaje, y no lleva View.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "object"
+          }
+        }
+      }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "condition": {
+      "type": "object",
+      "description": "UN MOTIVO por el que se produce este codigo. Cada motivo implica una ACCION DISTINTA de quien lo recibe, y ese es el criterio para separarlos: si dos motivos llevan a la misma accion, alcanza con uno solo. La CLAVE es el identificador estable que usa el codigo generado; es canonica, asi que su texto no se reescribe -- quien necesite decirlo de otra manera declara una condicion propia, con clave nueva.",
+      "required": [
+        "message",
+        "expects"
+      ],
+      "properties": {
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "description": "El texto con el que el error se lanza en runtime."
+        },
+        "expects": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Que tiene que hacer quien recibe el error para resolverlo. Es lo que justifica que la condicion exista: si nadie puede decir que hacer, esa condicion se puede unir a otra."
+        },
+        "delegable": {
+          "type": "boolean",
+          "description": "Si un mediador (un gateway) puede resolver esta condicion. Que efectivamente la asuma es del despliegue y se declara en `extensions.generation.mediator`."
+        },
+        "relieves": {
+          "type": "boolean",
+          "description": "Si que un mediador la asuma RELEVA a quien esta detras de hacerla. `delegable` dice que un mediador PUEDE tomarla; esto dice que pasa cuando la toma. Con true la generacion deja de emitir esa validacion --es la regla--. Con false la sigue emitiendo y lo delegado es la COMPLEJIDAD, no el control: el 401 no se puede delegar entero porque el servicio sigue verificando la credencial que le llega, `resourceNotPermitted` depende del dato y el dato lo tiene el servicio, y una precondicion tiene que evaluarse atomicamente con la escritura. OBLIGATORIO cuando `delegable` es true: sin esto, no haberlo mirado se guarda como \"releva\" y la generacion deja de emitir una validacion porque nadie contesto la pregunta."
+        },
+        "communicates": {
+          "type": "string",
+          "description": "Que dato tiene que viajar ademas del mensaje para que la accion sea posible (`retryAfter`). Agnostico: el MECANISMO lo aporta la tecnologia -- en HTTP, la cabecera correspondiente."
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "delegable": { "const": true } }, "required": ["delegable"] },
+          "then": { "required": ["relieves"] }
+        }
+      ]
+    },
+    "conditions": {
+      "type": "object",
+      "description": "Los motivos por los que se produce este codigo, por clave. El 400 y el 422 no los declaran, por razones opuestas: los del 400 salen del schema de la View de entrada, y los del 422 los declara cada Intent.",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-zA-Z0-9]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/condition"
+      }
+    }
+  }
 }
